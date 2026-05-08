@@ -1,0 +1,26 @@
+# dependencies
+node_modules
+
+# nextjs
+.next
+out
+
+# builds
+dist
+build
+
+# logs
+*.log
+
+# env
+.env
+.env.local
+
+# mac
+.DS_Store
+
+# coverage
+coverage
+
+# turbo
+.turbo

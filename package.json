@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run start",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev"
+  }
+}
+

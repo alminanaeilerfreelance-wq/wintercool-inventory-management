@@ -1,0 +1,372 @@
+const express = require('express');
+const router = express.Router();
+const XLSX = require('xlsx');
+const Inventory = require('../models/Inventory');
+const { protect } = require('../middleware/auth');
+const { updateStockStatus } = require('../utils/stockStatus');
+
+const populateFields = [
+  { path: 'sku' },
+  { path: 'barcode'},
+  { path: 'brand' },
+  { path: 'design' },
+  { path: 'supplier' },
+  { path: 'category' },
+  { path: 'productName' },
+  { path: 'zone' },
+  { path: 'bin' },
+  { path: 'rack' },
+  { path: 'location' },
+  { path: 'warehouse' },
+  { path: 'type' },
+  { path: 'unit' },
+];
+
+// GET /api/inventory/low-stock — items not in_stock
+router.get('/low-stock', protect, async (req, res) => {
+  try {
+    const items = await Inventory.find({
+      stockStatus: { $in: ['low_stock', 'out_of_stock'] },
+    })
+      .populate(populateFields)
+      .sort({ stockStatus: 1, quantity: 1 });
+    res.json({ items, total: items.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/inventory/export/excel — export all inventory as Excel file
+router.post('/export/excel', protect, async (req, res) => {
+  try {
+    const items = await Inventory.find({})
+      .populate(populateFields)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const rows = items.map((item) => ({
+      SKU: item.sku || '',
+      Barcode: item.barcode || '',
+      Brand: item.brand?.name || '',
+      Design: item.design?.name || '',
+      Category: item.category?.name || '',
+      ProductName: item.productName?.name || '',
+      Supplier: item.supplier?.name || '',
+      Warehouse: item.warehouse?.name || '',
+      Zone: item.zone?.name || '',
+      Bin: item.bin?.name || '',
+      Rack: item.rack?.name || '',
+      Location: item.location?.name || '',
+      Type: item.type?.name || '',
+      Unit: item.unit?.name || '',
+      Cost: item.cost || 0,
+      SRP: item.srp || 0,
+      Quantity: item.quantity || 0,
+      // Ensure totals are always present (fallback to Cost*Qty / SRP*Qty)
+      TotalCost:
+        item.totalCost !== undefined && item.totalCost !== null
+          ? item.totalCost
+          : (Number(item.cost) || 0) * (Number(item.quantity) || 0),
+      TotalSRP:
+        item.totalSrp !== undefined && item.totalSrp !== null
+          ? item.totalSrp
+          : (Number(item.srp) || 0) * (Number(item.quantity) || 0),
+      VatType: item.vatType || '',
+      VatAmount: item.vatAmount || 0,
+      StockStatus: item.stockStatus || '',
+      LowStockThreshold: item.lowStockThreshold || 0,
+      ExpirationDate: item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : '',
+      DateReceived: item.dateReceived ? new Date(item.dateReceived).toLocaleDateString() : '',
+      IsActive: item.isActive ? 'Yes' : 'No',
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="inventory.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/inventory — search, filter, paginate
+router.get('/', protect, async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 10, stock_status, noPagination } = req.query;
+
+    const query = {};
+
+    if (stock_status) {
+      query.stockStatus = stock_status;
+    }
+
+    if (search) {
+      // For simplicity, build a pipeline that can match on ref'd doc names
+      const normalizedStockStatus = stock_status
+        ? String(stock_status).toLowerCase().replace(/\s+/g, '_')
+        : null;
+
+      const pipeline = [
+        {
+          $lookup: { from: 'productnames', localField: 'productName', foreignField: '_id', as: 'productNameDoc' },
+        },
+        {
+          $lookup: { from: 'brands', localField: 'brand', foreignField: '_id', as: 'brandDoc' },
+        },
+        {
+          $lookup: { from: 'suppliers', localField: 'supplier', foreignField: '_id', as: 'supplierDoc' },
+        },
+        {
+          $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'categoryDoc' },
+        },
+        {
+          $lookup: { from: 'zones', localField: 'zone', foreignField: '_id', as: 'zoneDoc' },
+        },
+        {
+          $lookup: { from: 'bins', localField: 'bin', foreignField: '_id', as: 'binDoc' },
+        },
+        {
+          $lookup: { from: 'racks', localField: 'rack', foreignField: '_id', as: 'rackDoc' },
+        },
+        {
+          $lookup: { from: 'locations', localField: 'location', foreignField: '_id', as: 'locationDoc' },
+        },
+        {
+          $lookup: { from: 'warehouses', localField: 'warehouse', foreignField: '_id', as: 'warehouseDoc' },
+        },
+        {
+          $match: {
+            ...(stock_status
+              ? { stockStatus: { $in: [stock_status, normalizedStockStatus] } }
+              : {}),
+            $or: [
+              { 'productNameDoc.name': { $regex: search, $options: 'i' } },
+              { 'brandDoc.name': { $regex: search, $options: 'i' } },
+              { 'supplierDoc.name': { $regex: search, $options: 'i' } },
+              { 'categoryDoc.name': { $regex: search, $options: 'i' } },
+              { 'zoneDoc.name': { $regex: search, $options: 'i' } },
+              { 'binDoc.name': { $regex: search, $options: 'i' } },
+              { 'rackDoc.name': { $regex: search, $options: 'i' } },
+              { 'locationDoc.name': { $regex: search, $options: 'i' } },
+              { 'warehouseDoc.name': { $regex: search, $options: 'i' } },
+              { sku: { $regex: search, $options: 'i' } },
+              { barcode: { $regex: search, $options: 'i' } },
+            ],
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ];
+
+      if (noPagination) {
+        const result = await Inventory.aggregate(pipeline);
+        const ids = result.map((i) => i._id);
+        const items = await Inventory.find({ _id: { $in: ids } })
+          .populate(populateFields)
+          .sort({ createdAt: -1 });
+        return res.json({ items, total: items.length });
+      }
+
+      pipeline.push({
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: (Number(page) - 1) * Number(limit) }, { $limit: Number(limit) }],
+        },
+      });
+
+      const result = await Inventory.aggregate(pipeline);
+      const total = result[0].metadata[0]?.total || 0;
+      const rawItems = result[0].data;
+
+      const ids = rawItems.map((i) => i._id);
+      const items = await Inventory.find({ _id: { $in: ids } })
+        .populate(populateFields)
+        .sort({ createdAt: -1 });
+
+      return res.json({ items, total, page: Number(page), pages: Math.ceil(total / limit) });
+    }
+
+    const total = await Inventory.countDocuments(query);
+
+    if (noPagination) {
+      const items = await Inventory.find(query)
+        .populate(populateFields)
+        .sort({ createdAt: -1 });
+      return res.json({ items, total: items.length });
+    }
+
+    const items = await Inventory.find(query)
+      .populate(populateFields)
+      .sort({ createdAt: -1 })
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit));
+
+    res.json({ items, total, page: Number(page), pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/inventory/:id — single item
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const item = await Inventory.findById(req.params.id).populate(populateFields);
+    if (!item) return res.status(404).json({ message: 'Not found' });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/inventory — create
+router.post('/', protect, async (req, res) => {
+  try {
+    const data = { ...req.body };
+
+    // Field mapping: convert xxxId to field names
+    if (data.brandId) data.brand = data.brandId;
+    if (data.designId) data.design = data.designId;
+    if (data.supplierId) data.supplier = data.supplierId;
+    if (data.categoryId) data.category = data.categoryId;
+    if (data.productId) data.productName = data.productId;
+    if (data.zoneId) data.zone = data.zoneId;
+    if (data.binId) data.bin = data.binId;
+    if (data.rackId) data.rack = data.rackId;
+    if (data.locationId) data.location = data.locationId;
+    if (data.warehouseId) data.warehouse = data.warehouseId;
+    if (data.typeId) data.type = data.typeId;
+    if (data.unitId) data.unit = data.unitId;
+
+    const cost = Number(data.cost) || 0;
+    const srp = Number(data.srp) || 0;
+    const quantity = Number(data.quantity) || 0;
+    const lowStockThreshold = Number(data.lowStockThreshold) || 10;
+
+    data.totalCost = cost * quantity;
+    data.totalSrp = srp * quantity;
+    data.stockStatus = updateStockStatus(quantity, lowStockThreshold);
+
+    const item = await Inventory.create(data);
+    const populated = await Inventory.findById(item._id).populate(populateFields);
+    res.status(201).json(populated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// PUT /api/inventory/:id — update
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const data = { ...req.body };
+
+    // Field mapping: convert xxxId to field names
+    if (data.brandId) data.brand = data.brandId;
+    if (data.designId) data.design = data.designId;
+    if (data.supplierId) data.supplier = data.supplierId;
+    if (data.categoryId) data.category = data.categoryId;
+    if (data.productId) data.productName = data.productId;
+    if (data.zoneId) data.zone = data.zoneId;
+    if (data.binId) data.bin = data.binId;
+    if (data.rackId) data.rack = data.rackId;
+    if (data.locationId) data.location = data.locationId;
+    if (data.warehouseId) data.warehouse = data.warehouseId;
+    if (data.typeId) data.type = data.typeId;
+    if (data.unitId) data.unit = data.unitId;
+
+    const existing = await Inventory.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Not found' });
+
+    const cost = data.cost !== undefined ? Number(data.cost) : existing.cost || 0;
+    const srp = data.srp !== undefined ? Number(data.srp) : existing.srp || 0;
+    const quantity = data.quantity !== undefined ? Number(data.quantity) : existing.quantity || 0;
+    const lowStockThreshold =
+      data.lowStockThreshold !== undefined ? Number(data.lowStockThreshold) : existing.lowStockThreshold || 10;
+
+    data.totalCost = cost * quantity;
+    data.totalSrp = srp * quantity;
+    data.stockStatus = updateStockStatus(quantity, lowStockThreshold);
+
+    const item = await Inventory.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true })
+      .populate(populateFields);
+
+    res.json(item);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// POST /api/inventory/bulk-import — authenticated
+router.post('/bulk-import', protect, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'items array is required' });
+    }
+
+    const results = { imported: 0, failed: 0, errors: [] };
+    const requiredFields = ['productName', 'warehouse', 'category', 'zone', 'bin', 'location'];
+
+    for (let i = 0; i < items.length; i++) {
+      const row = items[i];
+      try {
+        for (const field of requiredFields) {
+          if (!row[field]) throw new Error(`Missing required field: ${field}`);
+        }
+
+        const qty = Number(row.quantity) || 0;
+        const cost = Number(row.cost) || 0;
+        const srp = Number(row.srp) || 0;
+
+        const data = { ...row };
+        if (data.productNameId) data.productName = data.productNameId;
+        if (data.warehouseId) data.warehouse = data.warehouseId;
+        if (data.categoryId) data.category = data.categoryId;
+        if (data.zoneId) data.zone = data.zoneId;
+        if (data.binId) data.bin = data.binId;
+        if (data.locationId) data.location = data.locationId;
+        if (data.brandId) data.brand = data.brandId;
+        if (data.designId) data.design = data.designId;
+        if (data.supplierId) data.supplier = data.supplierId;
+        if (data.typeId) data.type = data.typeId;
+        if (data.unitId) data.unit = data.unitId;
+
+        await Inventory.create({
+          ...data,
+          quantity: qty,
+          cost,
+          srp,
+          totalCost: qty * cost,
+          totalSrp: qty * srp,
+          stockStatus: updateStockStatus(qty, row.lowStockThreshold || 10),
+        });
+
+        results.imported++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push({ row: i + 1, message: err.message });
+      }
+    }
+
+    res.status(201).json(results);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE /api/inventory/:id — authenticated
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const item = await Inventory.findByIdAndDelete(req.params.id);
+    if (!item) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+module.exports = router;
+
