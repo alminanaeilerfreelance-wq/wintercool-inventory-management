@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
+
 import Stack from '@mui/material/Stack';
+
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useSnackbar } from 'notistack';
-import api from '../../utils/api';
+
 
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -25,7 +23,7 @@ import AdminConfirmDialog from '../../components/Common/AdminConfirmDialog';
 import { getCRUD } from '../../utils/api';
 
 const locationsApi = getCRUD('locations');
-const EMPTY_FORM = { name: '', rackId: '', description: '' };
+const EMPTY_FORM = { name: '', description: '' };
 
 export default function LocationsPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -37,7 +35,7 @@ export default function LocationsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
 
-  const [racks, setRacks] = useState([]);
+
 
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -48,13 +46,7 @@ export default function LocationsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  const fetchOptions = useCallback(async () => {
-    try {
-      const rRes = await api.get('/racks');
-      const d = rRes.data.data || rRes.data;
-      setRacks(Array.isArray(d) ? d : d.items || d.racks || []);
-    } catch { /* silently fail */ }
-  }, []);
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -71,27 +63,22 @@ export default function LocationsPage() {
     }
   }, [page, rowsPerPage, search, enqueueSnackbar]);
 
-  useEffect(() => { fetchOptions(); }, [fetchOptions]);
+
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
   const openEdit = (row) => {
     setFormData({
       name: row.name || '',
-      rackId: row.rackId || row.rack?._id || row.rack?.id || '',
       description: row.description || '',
     });
     setEditId(row._id || row.id);
     setFormOpen(true);
   };
 
-  const getName = (list, row, field, objKey) => {
-    const obj = row[objKey];
-    if (obj?.name) return obj.name;
-    const id = row[field] || (typeof obj === 'string' ? obj : null);
-    const found = list.find((i) => (i._id || i.id) === id);
-    return found?.name || '—';
-  };
+
+
+
 
 
   const handleFormSubmit = async () => {
@@ -127,7 +114,6 @@ export default function LocationsPage() {
 
   const columns = [
     { field: 'name', headerName: 'Name' },
-    { field: 'rack', headerName: 'Rack', renderCell: ({ row }) => getName(racks, row, 'rackId', 'rack') },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -139,7 +125,14 @@ export default function LocationsPage() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
-            <IconButton size="small" color="error" onClick={() => { setDeleteId(row._id || row.id); setDeleteOpen(true); }}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => {
+                setDeleteId(row._id || row.id);
+                setDeleteOpen(true);
+              }}
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -147,6 +140,7 @@ export default function LocationsPage() {
       ),
     },
   ];
+
 
   return (
     <MainLayout title="Locations">
@@ -185,16 +179,16 @@ export default function LocationsPage() {
         maxWidth="md"
       >
         <Stack spacing={2} mt={1}>
-          <TextField label="Name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} fullWidth required />
-          <FormControl fullWidth>
-            <InputLabel>Rack</InputLabel>
-            <Select value={formData.rackId} label="Rack" onChange={(e) => setFormData((p) => ({ ...p, rackId: e.target.value }))}>
-              <MenuItem value=""><em>None</em></MenuItem>
-              {racks.map((r) => <MenuItem key={r._id || r.id} value={r._id || r.id}>{r.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <TextField label="Description" value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} fullWidth multiline rows={2} />
+          <TextField
+            label="Name"
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            fullWidth
+            required
+          />
+     
         </Stack>
+
       </FormDialog>
 
    

@@ -38,6 +38,8 @@ import AdminConfirmDialog from '../../components/Common/AdminConfirmDialog';
 import PageHeader from '../../components/Common/PageHeader';
 import { getUsers, createUser, updateUser, deleteUser } from '../../utils/api';
 import api from '../../utils/api';
+import { unlockUser } from '../../utils/apiUsers';
+
 
 const EMPTY_FORM = {
   customerName: '',
@@ -125,6 +127,9 @@ export default function UsersPage() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [unlockId, setUnlockId] = useState(null);
+
 
   const fetchBranches = useCallback(async () => {
     try {
@@ -249,6 +254,20 @@ export default function UsersPage() {
     }
   };
 
+  const handleUnlockConfirm = async () => {
+    try {
+      await unlockUser(unlockId);
+      enqueueSnackbar('User unlocked', { variant: 'success' });
+      setUnlockOpen(false);
+      setUnlockId(null);
+      fetchData();
+    } catch (err) {
+      enqueueSnackbar(err?.response?.data?.message || 'Unlock failed', { variant: 'error' });
+      throw err;
+    }
+  };
+
+
   const columns = [
     {
       field: 'image',
@@ -311,25 +330,45 @@ export default function UsersPage() {
     {
       field: 'actions',
       headerName: 'Actions',
-      renderCell: ({ row }) => (
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="Edit">
-            <IconButton size="small" color="warning" onClick={() => openEdit(row)}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => { setDeleteId(row._id || row.id); setDeleteOpen(true); }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
+      renderCell: ({ row }) => {
+        const unlockable = row.lockUntil && new Date(row.lockUntil).getTime() > Date.now();
+        return (
+          <Stack direction="row" spacing={0.5}>
+            {unlockable && (
+              <Tooltip title="Unlock">
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={() => {
+                    setUnlockId(row._id || row.id);
+                    setUnlockOpen(true);
+                  }}
+                >
+                  <ManageAccountsIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Edit">
+              <IconButton size="small" color="warning" onClick={() => openEdit(row)}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Delete">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => { setDeleteId(row._id || row.id); setDeleteOpen(true); }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        );
+      },
     },
+
   ];
 
   return (
@@ -529,6 +568,15 @@ export default function UsersPage() {
         description="Enter admin password to save user changes."
       />
 
+      {/* Unlock Confirm */}
+      <AdminConfirmDialog
+        open={unlockOpen}
+        onClose={() => setUnlockOpen(false)}
+        onConfirm={handleUnlockConfirm}
+        title="Unlock User"
+        description="Enter admin password to unlock this user account."
+      />
+
       {/* Delete Confirm */}
       <AdminConfirmDialog
         open={deleteOpen}
@@ -537,6 +585,7 @@ export default function UsersPage() {
         title="Delete User"
         description="Are you sure? This will permanently delete the user. Enter admin password to confirm."
       />
+
     </MainLayout>
   );
 }

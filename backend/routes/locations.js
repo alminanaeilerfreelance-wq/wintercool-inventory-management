@@ -40,10 +40,10 @@ router.get('/:id', protect, async (req, res) => {
 // POST create
 router.post('/', protect, async (req, res) => {
   try {
-    const { name, rackId, description } = req.body;
+    const { name} = req.body;
     if (!name) return res.status(400).json({ message: 'Name is required' });
     
-    const locationData = { name, description, rack: rackId || null };
+    const locationData = { name};
     const item = await Location.create(locationData);
     const populated = await item.populate('rack');
     res.status(201).json(populated);
@@ -55,8 +55,8 @@ router.post('/', protect, async (req, res) => {
 // PUT update
 router.put('/:id', protect, async (req, res) => {
   try {
-    const { name, rackId, description } = req.body;
-    const updateData = { name, description, rack: rackId || null };
+    const { name } = req.body;
+    const updateData = { name };
     
     const item = await Location.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
       .populate('rack');

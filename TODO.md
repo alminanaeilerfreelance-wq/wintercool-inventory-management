@@ -1,8 +1,6 @@
 # TODO
 
-- [x] Backend: add `/api/reports/sub-dealer-invoices` endpoint with dateFrom/dateTo, optional search/status/raw support and totals suitable for `ReportPrint`.
-- [x] Frontend: add `frontend/pages/reports/sub-dealer-invoices.js` report page with date-range filters, generate button, and print/PDF preview using `ReportPrint`.
-
-- [ ] Verify manually: call API with date range and confirm shape `{ items, totals }`.
-- [ ] Verify UI: generate report + print preview.
+- [ ] Update Locations UI (frontend/pages/master/locations.js): remove Rack column and Rack field from Add/Edit form; update formData and submit payload.
+- [ ] Update Locations backend (backend/routes/locations.js) so Rack association is removed on update/create and never populated from omitted rackId (since UI will not send rackId anymore).
+- [ ] Run frontend/backend tests/build (at least lint + start) and verify Add/Edit/Delete works for Locations.
 

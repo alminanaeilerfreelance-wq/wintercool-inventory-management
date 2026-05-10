@@ -268,7 +268,7 @@ const columns = [
 // SKU COLUMN
   {
     field: 'sku',
-    headerName: 'SKU',
+    headerName: 'Serial No.',
     width: 150,
     renderCell: ({ row }) => (
       <Typography variant="body2" fontWeight={600}>
@@ -398,14 +398,15 @@ const columns = [
       headerName: 'Stock Status',
       width: 140,
       renderCell: ({ row }) => {
-        const s = row.stockStatus || row.stock_status || 'In Stock';
+        const s = row.stockStatus || row.stock_status || 'in_stock';
         const colorMap = {
-          'In Stock': '#4caf50',
           'in_stock': '#4caf50',
-          'Low Stock': '#ff9800',
           'low_stock': '#ff9800',
-          'Out of Stock': '#f44336',
           'out_of_stock': '#f44336',
+          // allow legacy labels
+          'In Stock': '#4caf50',
+          'Low Stock': '#ff9800',
+          'Out of Stock': '#f44336',
         };
         const dotColor = colorMap[s] || '#9e9e9e';
         return (
@@ -418,7 +419,21 @@ const columns = [
                 bgcolor: dotColor,
               }}
             />
-            <Chip label={s} size="small" color={STOCK_STATUS_COLORS[s] || 'default'} />
+          <Chip
+            label={
+              s === 'in_stock' || s === 'In Stock'
+                ? 'In Stock'
+                : s === 'low_stock' || s === 'Low Stock'
+                  ? 'Low Stock'
+                  : s === 'out_of_stock' || s === 'Out of Stock'
+                    ? 'Out of Stock'
+                    : s
+            }
+            size="small"
+            color={STOCK_STATUS_COLORS[
+              s === 'in_stock' ? 'In Stock' : s === 'low_stock' ? 'Low Stock' : s === 'out_of_stock' ? 'Out of Stock' : s
+            ] || 'default'}
+          />
           </Stack>
         );
       },
@@ -532,9 +547,9 @@ const columns = [
                   onChange={(e) => { setStockFilter(e.target.value); setPage(0); }}
                 >
                   <MenuItem value="">All</MenuItem>
-                  <MenuItem value="In Stock">In Stock</MenuItem>
-                  <MenuItem value="Low Stock">Low Stock</MenuItem>
-                  <MenuItem value="Out of Stock">Out of Stock</MenuItem>
+                  <MenuItem value="in_stock">In Stock</MenuItem>
+                  <MenuItem value="low_stock">Low Stock</MenuItem>
+                  <MenuItem value="out_of_stock">Out of Stock</MenuItem>
                 </Select>
               </FormControl>
             </Stack>
@@ -562,7 +577,7 @@ const columns = [
           <Grid container spacing={2} mt={0.5}>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="SKU"
+                label="Serial No."
                 fullWidth
                 size="small"
                 value={formData.sku}

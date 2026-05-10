@@ -7,7 +7,7 @@ const { updateStockStatus } = require('../utils/stockStatus');
 
 const populateFields = [
   { path: 'sku' },
-  { path: 'barcode'},
+  { path: 'barcode' },
   { path: 'brand' },
   { path: 'design' },
   { path: 'supplier' },
@@ -111,7 +111,12 @@ router.get('/', protect, async (req, res) => {
         ? String(stock_status).toLowerCase().replace(/\s+/g, '_')
         : null;
 
+      const normalizedMatch = normalizedStockStatus
+        ? normalizedStockStatus
+        : null;
+
       const pipeline = [
+
         {
           $lookup: { from: 'productnames', localField: 'productName', foreignField: '_id', as: 'productNameDoc' },
         },
@@ -142,7 +147,7 @@ router.get('/', protect, async (req, res) => {
         {
           $match: {
             ...(stock_status
-              ? { stockStatus: { $in: [stock_status, normalizedStockStatus] } }
+              ? { stockStatus: normalizedMatch }
               : {}),
             $or: [
               { 'productNameDoc.name': { $regex: search, $options: 'i' } },

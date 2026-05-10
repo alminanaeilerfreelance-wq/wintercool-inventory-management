@@ -21,7 +21,12 @@ const sanitize = (user) => ({
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
   permissions: user.permissions,
+  lockUntil: user.lockUntil,
+  failedLoginAttempts: user.failedLoginAttempts,
+  isSuspicious: user.isSuspicious,
+  suspiciousReason: user.suspiciousReason,
 });
+
 
 // GET /api/users — list all (admin only)
 router.get('/', protect, adminOnly, async (req, res) => {
@@ -132,6 +137,30 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
   }
 });
 
+// PUT /api/users/:id/unlock — unlock a locked account (admin only)
+router.put('/:id/unlock', protect, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const wasLocked = !!(user.lockUntil && user.lockUntil > Date.now());
+
+    user.lockUntil = null;
+    user.failedLoginAttempts = 0;
+    user.isSuspicious = false;
+    user.suspiciousReason = undefined;
+
+    await user.save();
+
+    res.json({
+      message: wasLocked ? 'User unlocked successfully' : 'User lock cleared successfully',
+      userId: user._id,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // DELETE /api/users/:id — delete user (admin only, cannot delete self)
 router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
@@ -147,3 +176,4 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
 });
 
 module.exports = router;
+

@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
@@ -13,6 +9,7 @@ import { useSnackbar } from 'notistack';
 import api from '../../utils/api';
 
 import AddIcon from '@mui/icons-material/Add';
+
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
@@ -25,7 +22,7 @@ import AdminConfirmDialog from '../../components/Common/AdminConfirmDialog';
 import { getCRUD } from '../../utils/api';
 
 const racksApi = getCRUD('racks');
-const EMPTY_FORM = { name: '', binId: '', description: '' };
+const EMPTY_FORM = { name: '' };
 
 export default function RacksPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -37,9 +34,8 @@ export default function RacksPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
 
-  const [bins, setBins] = useState([]);
-
   const [formOpen, setFormOpen] = useState(false);
+
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -78,18 +74,12 @@ export default function RacksPage() {
   const openEdit = (row) => {
     setFormData({
       name: row.name || '',
-      binId: row.binId || row.bin?._id || row.bin?.id || '',
-      description: row.description || '',
     });
     setEditId(row._id || row.id);
     setFormOpen(true);
   };
 
-  const getBinName = (row) => {
-    if (row.bin?.name) return row.bin.name;
-    const b = bins.find((b) => (b._id || b.id) === (row.binId || row.bin));
-    return b?.name || '—';
-  };
+
 
   const handleFormSubmit = async () => {
     setFormLoading(true);
@@ -124,8 +114,6 @@ export default function RacksPage() {
 
   const columns = [
     { field: 'name', headerName: 'Name' },
-    { field: 'bin', headerName: 'Bin', renderCell: ({ row }) => getBinName(row) },
-    { field: 'description', headerName: 'Description' },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -137,7 +125,14 @@ export default function RacksPage() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
-            <IconButton size="small" color="error" onClick={() => { setDeleteId(row._id || row.id); setDeleteOpen(true); }}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => {
+                setDeleteId(row._id || row.id);
+                setDeleteOpen(true);
+              }}
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -183,16 +178,7 @@ export default function RacksPage() {
       >
         <Stack spacing={2} mt={1}>
           <TextField label="Name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} fullWidth required />
-          <FormControl fullWidth>
-            <InputLabel>Bin</InputLabel>
-            <Select value={formData.binId} label="Bin" onChange={(e) => setFormData((p) => ({ ...p, binId: e.target.value }))}>
-              <MenuItem value=""><em>None</em></MenuItem>
-              {bins.map((b) => (
-                <MenuItem key={b._id || b.id} value={b._id || b.id}>{b.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField label="Description" value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} fullWidth multiline rows={3} />
+
         </Stack>
       </FormDialog>
 

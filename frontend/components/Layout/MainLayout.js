@@ -101,7 +101,7 @@ const NAV_ITEMS = [
     children: [
       { label: 'Stock List', href: '/inventory' },
       { label: 'Adjustment', href: '/inventory/adjustment' },
-      { label: 'Scanner', href: '/inventory/scanner', icon: <QrCodeScannerIcon /> },
+      // { label: 'Scanner', href: '/inventory/scanner', icon: <QrCodeScannerIcon /> },
       { label: 'Bulk Import', href: '/inventory/bulk-import', icon: <CloudUploadIcon /> },
     ],
   },

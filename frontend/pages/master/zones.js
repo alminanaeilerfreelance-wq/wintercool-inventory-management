@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useSnackbar } from 'notistack';
-import api from '../../utils/api';
+
 
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,7 +23,7 @@ import { getCRUD } from '../../utils/api';
 
 const zonesApi = getCRUD('zones');
 
-const EMPTY_FORM = { name: '', warehouseId: '', description: '' };
+const EMPTY_FORM = { name: '' };
 
 export default function ZonesPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -39,7 +35,7 @@ export default function ZonesPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
 
-  const [warehouses, setWarehouses] = useState([]);
+
 
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -51,13 +47,8 @@ export default function ZonesPage() {
 
 
 
-  const fetchOptions = useCallback(async () => {
-    try {
-      const res = await api.get('/warehouses');
-      const data = res.data.data || res.data;
-      setWarehouses(Array.isArray(data) ? data : data.items || data.warehouses || []);
-    } catch { /* silently fail */ }
-  }, []);
+
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -74,25 +65,19 @@ export default function ZonesPage() {
     }
   }, [page, rowsPerPage, search, enqueueSnackbar]);
 
-  useEffect(() => { fetchOptions(); }, [fetchOptions]);
+
+
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
   const openEdit = (row) => {
-    setFormData({
-      name: row.name || '',
-      warehouseId: row.warehouseId || row.warehouse?._id || row.warehouse?.id || '',
-      description: row.description || '',
-    });
+    setFormData({ name: row.name || '' });
     setEditId(row._id || row.id);
     setFormOpen(true);
   };
 
-  const getWarehouseName = (row) => {
-    if (row.warehouse?.name) return row.warehouse.name;
-    const wh = warehouses.find((w) => (w._id || w.id) === (row.warehouseId || row.warehouse));
-    return wh?.name || '—';
-  };
+
+
 
   const handleFormSubmit = async () => {
     if (!formData.name) {
@@ -133,8 +118,6 @@ export default function ZonesPage() {
 
   const columns = [
     { field: 'name', headerName: 'Name' },
-    { field: 'warehouse', headerName: 'Warehouse', renderCell: ({ row }) => getWarehouseName(row) },
-    { field: 'description', headerName: 'Description' },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -193,17 +176,8 @@ export default function ZonesPage() {
 
         <Stack spacing={2} mt={1}>
           <TextField label="Name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} fullWidth required />
-          <FormControl fullWidth>
-            <InputLabel>Warehouse</InputLabel>
-            <Select value={formData.warehouseId} label="Warehouse" onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}>
-              <MenuItem value=""><em>None</em></MenuItem>
-              {warehouses.map((w) => (
-                <MenuItem key={w._id || w.id} value={w._id || w.id}>{w.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField label="Description" value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} fullWidth multiline rows={3} />
         </Stack>
+
       </FormDialog>
 
 

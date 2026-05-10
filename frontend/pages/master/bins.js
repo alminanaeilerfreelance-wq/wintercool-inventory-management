@@ -1,21 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import { useSnackbar } from 'notistack';
-import api from '../../utils/api';
-
+import InboxIcon from '@mui/icons-material/Inbox';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import InboxIcon from '@mui/icons-material/Inbox';
+import { useSnackbar } from 'notistack';
 
 import MainLayout from '../../components/Layout/MainLayout';
 import DataTable from '../../components/Common/DataTable';
@@ -25,7 +18,7 @@ import AdminConfirmDialog from '../../components/Common/AdminConfirmDialog';
 import { getCRUD } from '../../utils/api';
 
 const binsApi = getCRUD('bins');
-const EMPTY_FORM = { name: '', zoneId: '', description: '' };
+const EMPTY_FORM = { name: '' };
 
 export default function BinsPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -37,8 +30,6 @@ export default function BinsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
 
-  const [zones, setZones] = useState([]);
-
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
@@ -47,14 +38,6 @@ export default function BinsPage() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
-
-  const fetchOptions = useCallback(async () => {
-    try {
-      const res = await api.get('/zones');
-      const data = res.data.data || res.data;
-      setZones(Array.isArray(data) ? data : data.items || data.zones || []);
-    } catch { /* silently fail */ }
-  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -71,32 +54,24 @@ export default function BinsPage() {
     }
   }, [page, rowsPerPage, search, enqueueSnackbar]);
 
-  useEffect(() => { fetchOptions(); }, [fetchOptions]);
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
+  const openAdd = () => {
+    setFormData(EMPTY_FORM);
+    setEditId(null);
+    setFormOpen(true);
+  };
+
   const openEdit = (row) => {
-    setFormData({
-      name: row.name || '',
-      zoneId: row.zoneId || row.zone?._id || row.zone?.id || '',
-      description: row.description || '',
-    });
+    setFormData({ name: row.name || '' });
     setEditId(row._id || row.id);
     setFormOpen(true);
   };
 
-  const getZoneName = (row) => {
-    if (row.zone?.name) return row.zone.name;
-    const z = zones.find((z) => (z._id || z.id) === (row.zoneId || row.zone));
-    return z?.name || '—';
-  };
 
-  const handleFormSubmit = () => {
-    if (!formData.name) { enqueueSnackbar('Name is required', { variant: 'warning' }); return; }
-    setAdminOpen(true);
-  };
-
-  const handleAdminConfirm = async () => {
+  const handleFormSubmit = async () => {
     setFormLoading(true);
     try {
       if (editId) {
@@ -129,8 +104,6 @@ export default function BinsPage() {
 
   const columns = [
     { field: 'name', headerName: 'Name' },
-    { field: 'zone', headerName: 'Zone', renderCell: ({ row }) => getZoneName(row) },
-    { field: 'description', headerName: 'Description' },
     {
       field: 'actions',
       headerName: 'Actions',
@@ -142,7 +115,14 @@ export default function BinsPage() {
             </IconButton>
           </Tooltip>
           <Tooltip title="Delete">
-            <IconButton size="small" color="error" onClick={() => { setDeleteId(row._id || row.id); setDeleteOpen(true); }}>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => {
+                setDeleteId(row._id || row.id);
+                setDeleteOpen(true);
+              }}
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -188,26 +168,11 @@ export default function BinsPage() {
       >
         <Stack spacing={2} mt={1}>
           <TextField label="Name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} fullWidth required />
-          <FormControl fullWidth>
-            <InputLabel>Zone</InputLabel>
-            <Select value={formData.zoneId} label="Zone" onChange={(e) => setFormData((p) => ({ ...p, zoneId: e.target.value }))}>
-              <MenuItem value=""><em>None</em></MenuItem>
-              {zones.map((z) => (
-                <MenuItem key={z._id || z.id} value={z._id || z.id}>{z.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField label="Description" value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} fullWidth multiline rows={3} />
         </Stack>
+
       </FormDialog>
 
-      <AdminConfirmDialog
-        open={adminOpen}
-        onClose={() => setAdminOpen(false)}
-        onConfirm={handleAdminConfirm}
-        title="Admin Confirmation"
-        description="Enter admin password to confirm this action."
-      />
+
 
       <AdminConfirmDialog
         open={deleteOpen}
