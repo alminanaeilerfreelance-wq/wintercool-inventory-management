@@ -42,6 +42,7 @@ const NewConversationDialog = ({
   const handleCreate1to1 = () => {
     if (selectedUsers.length === 1) {
       onCreate1to1(selectedUsers[0]);
+      // Ensure dialog closes
       handleClose();
     }
   };

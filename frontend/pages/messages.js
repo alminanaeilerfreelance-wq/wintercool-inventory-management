@@ -178,7 +178,48 @@ function MessagesPage() {
   }, [loadMessages, token, socket]);
 
   const handleNewChatOpen = () => setNewChatOpen(true);
+
+  // Called when user clicks "New Chat" inside ConversationList.
+  // If mode payload is provided (after selecting users), we handle creation.
+  // Otherwise just open the dialog.
+  const handleConversationListNewChat = (payload) => {
+    if (payload && payload.mode) {
+      return handleNewChatRequest(payload);
+    }
+    return handleNewChatOpen();
+  };
   const handleNewChatClose = () => setNewChatOpen(false);
+
+  const handleNewChatRequest = async (payload) => {
+    // payload: { mode: '1to1'|'group'|'broadcast', user?, groupData? }
+    // If a user/group is already provided (from dialog-confirm action), create/select now.
+    try {
+      if (!payload || !payload.mode) {
+        setNewChatOpen(true);
+        return;
+      }
+
+      if (payload.mode === '1to1' && payload.user) {
+        handleCreate1to1(payload.user);
+        return;
+      }
+
+      if (payload.mode === 'group' && payload.groupData) {
+        await handleCreateGroup(payload.groupData);
+        return;
+      }
+
+      if (payload.mode === 'broadcast') {
+        await handleBroadcast();
+        return;
+      }
+
+      setNewChatOpen(true);
+    } catch (err) {
+      console.error('handleNewChatRequest failed:', err);
+      setNewChatOpen(true);
+    }
+  };
 
   const handleCreate1to1 = (user) => {
     // Find or create 1-1 conversation
@@ -284,7 +325,7 @@ function MessagesPage() {
           selectedConversationId={selectedConversationId}
           unreadCounts={unreadCounts}
           totalUnread={Object.values(unreadCounts).reduce((a,b) => a + b, 0)}
-          onNewChat={handleNewChatOpen}
+          onNewChat={() => setNewChatOpen(true)}
           onSelectConversation={handleSelectConversation}
           searchValue={searchValue}
           onSearchChange={(e) => setSearchValue(e.target.value)}
@@ -301,7 +342,7 @@ function MessagesPage() {
             usersOnline={usersOnline}
             users={allUsers}
             userLoading={false}
-            onNewChat={handleNewChatOpen}
+            onNewChat={handleNewChatRequest}
           />
           <MessageList
             messages={messages}

@@ -1218,8 +1218,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Chat Widget */}
-      <ChatWidget />
+      {/* Chat widget removed from dashboard (chat lives in /messages page) */}
     </MainLayout>
   );
 }

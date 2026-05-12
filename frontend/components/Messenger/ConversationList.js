@@ -35,31 +35,26 @@ const ConversationList = ({
   const newChatMenuOpen = Boolean(anchorEl);
 
   const handleNewChatClick = (event) => {
-    setAnchorEl(event.currentTarget);
+    event?.preventDefault?.();
+    setNewChatDialogOpen(true);
   };
 
+  // Create a 1-1 conversation
   const handleNew1to1 = (user) => {
-    onSelectConversation(user);
+    // Parent page is responsible for creating/selecting the conversation.
+    // Keep this component UI-only.
+    onNewChat?.({ mode: '1to1', user });
     setNewChatDialogOpen(false);
   };
 
-  const handleNewGroup = async (groupData) => {
-    try {
-      // Create group via API
-      const response = await fetch('/api/messages/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(groupData)
-      });
-      const newConv = await response.json();
-      onSelectConversation(newConv._id);
-    } catch (error) {
-      console.error('Failed to create group:', error);
-    }
+  // Create group conversation
+  const handleNewGroup = (groupData) => {
+    onNewChat?.({ mode: 'group', groupData });
+    setNewChatDialogOpen(false);
   };
 
   const handleBroadcast = () => {
-    // Trigger broadcast flow
+    onNewChat?.({ mode: 'broadcast' });
     setNewChatDialogOpen(false);
   };
 
@@ -128,13 +123,12 @@ const ConversationList = ({
                     overlap="circular"
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                     variant="dot"
-                    color={isOnline ? "success" : "default"}
+                    color={isOnline ? 'success' : 'default'}
                   >
                     <Avatar sx={{ width: 48, height: 48 }}>
-                      {conv.isGroup 
+                      {conv.isGroup
                         ? conv.name?.[0]?.toUpperCase() || 'G'
-                        : (conv.participants?.find(p => p._id !== userId)?.name || 'U')[0]?.toUpperCase()
-                      }
+                        : (conv.participants?.[0]?.name || 'U')[0]?.toUpperCase()}
                     </Avatar>
                   </Badge>
                 </ListItemAvatar>
@@ -145,9 +139,9 @@ const ConversationList = ({
                         variant="subtitle2" 
                         sx={{ fontWeight: 600, display: 'block' }}
                       >
-                        {conv.isGroup 
-                          ? conv.name 
-                          : (conv.participants?.find(p => p._id !== userId)?.name || 'Unknown')
+                        {conv.isGroup
+                          ? conv.name
+                          : (conv.participants?.[0]?.name || 'Unknown')
                         }
                       </Typography>
                       <Typography 
