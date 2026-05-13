@@ -29,6 +29,8 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
+const ADMIN_DELETE_PASSWORD = 'admin password';
+
 import MainLayout from '../../components/Layout/MainLayout';
 import DataTable from '../../components/Common/DataTable';
 import FormDialog from '../../components/Common/FormDialog';
@@ -70,7 +72,7 @@ const EMPTY_FORM = {
   srp: '',
   quantity: '',
   vatType: 'exclusive',
-  sku: '',
+  serialNo: '',
   barcode: '',
   lowStockThreshold: '',
 };
@@ -169,7 +171,7 @@ export default function InventoryPage() {
       srp: row.srp ?? '',
       quantity: row.quantity ?? '',
       vatType: row.vatType || 'exclusive',
-      sku: row.sku ?? '',
+      serialNo: row.serialNo ?? '',
       barcode: row.barcode ?? '',
       lowStockThreshold: row.lowStockThreshold ?? '',
     });
@@ -181,11 +183,43 @@ export default function InventoryPage() {
   const setDate = (k) => (v) => setFormData((p) => ({ ...p, [k]: v }));
 
 const handleFormSubmit = async () => {
-  if (!formData.productId) {
-    enqueueSnackbar('Product is required', {
-      variant: 'warning',
-    });
-    return;
+  const requiredSelects = [
+    ['productId', 'Product Name'],
+    ['brandId', 'Brand'],
+    ['supplierId', 'Supplier'],
+    ['designId', 'Design'],
+    ['typeId', 'Type'],
+    ['warehouseId', 'Warehouse'],
+    ['categoryId', 'Category'],
+    ['zoneId', 'Zone'],
+    ['binId', 'Bin'],
+    ['rackId', 'Rack'],
+    ['locationId', 'Location'],
+  ];
+
+  for (const [key, label] of requiredSelects) {
+    if (!formData[key]) {
+      enqueueSnackbar(`${label} is required`, { variant: 'warning' });
+      return;
+    }
+  }
+
+  const requiredInputs = [
+    ['serialNo', 'Serial No.'],
+    ['barcode', 'Barcode'],
+    ['cost', 'Cost'],
+    ['srp', 'SRP'],
+    ['quantity', 'Quantity'],
+    ['lowStockThreshold', 'Low Stock Threshold'],
+    ['dateReceived', 'Date Received'],
+    ['expirationDate', 'Expiry Date'],
+  ];
+
+  for (const [key, label] of requiredInputs) {
+    if (formData[key] === '' || formData[key] === null || formData[key] === undefined) {
+      enqueueSnackbar(`${label} is required`, { variant: 'warning' });
+      return;
+    }
   }
 
   setFormLoading(true);
@@ -196,52 +230,43 @@ const handleFormSubmit = async () => {
       expirationDate: formData.expirationDate
         ? formData.expirationDate.toISOString()
         : null,
-
       dateReceived: formData.dateReceived
         ? formData.dateReceived.toISOString()
         : null,
-
       cost: Number(formData.cost),
       srp: Number(formData.srp),
       quantity: Number(formData.quantity),
-
-      lowStockThreshold:
-        Number(formData.lowStockThreshold) || 10,
-
-      sku: formData.sku || undefined,
-      barcode: formData.barcode || undefined,
+      lowStockThreshold: Number(formData.lowStockThreshold) || 10,
+      serialNo: formData.serialNo?.trim() || undefined,
+      barcode: formData.barcode?.trim() || undefined,
     };
 
     if (editId) {
       await updateInventory(editId, payload);
-
-      enqueueSnackbar('Inventory updated', {
-        variant: 'success',
-      });
+      enqueueSnackbar('Inventory updated', { variant: 'success' });
     } else {
       await createInventory(payload);
-
-      enqueueSnackbar('Inventory item added', {
-        variant: 'success',
-      });
+      enqueueSnackbar('Inventory item added', { variant: 'success' });
     }
 
     setFormOpen(false);
-
     fetchData();
   } catch (err) {
-    enqueueSnackbar(
-      err?.response?.data?.message || 'Save failed',
-      {
-        variant: 'error',
-      }
-    );
+    enqueueSnackbar(err?.response?.data?.message || 'Save failed', { variant: 'error' });
   } finally {
     setFormLoading(false);
   }
 };
 
   const handleDeleteClick = async (id) => {
+    const password = window.prompt('Enter admin password to delete this item:');
+    if (password === null) return;
+
+    if (password !== ADMIN_DELETE_PASSWORD) {
+      enqueueSnackbar('Invalid admin password. Delete action denied.', { variant: 'error' });
+      return;
+    }
+
     try {
       await deleteInventory(id);
       enqueueSnackbar('Item deleted', { variant: 'success' });
@@ -267,12 +292,12 @@ const handleFormSubmit = async () => {
 const columns = [
 // SKU COLUMN
   {
-    field: 'sku',
+    field: 'serialNo',
     headerName: 'Serial No.',
     width: 150,
     renderCell: ({ row }) => (
       <Typography variant="body2" fontWeight={600}>
-        {row.sku || '—'}
+        {row.serialNo || '—'}
       </Typography>
     ),
   },
@@ -580,9 +605,9 @@ const columns = [
                 label="Serial No."
                 fullWidth
                 size="small"
-                value={formData.sku}
-                onChange={setF('sku')}
-                placeholder="e.g., SKU-001"
+                value={formData.serialNo}
+                onChange={setF('serialNo')}
+                placeholder="e.g., SN-001"
               />
             </Grid>
             <Grid item xs={12} sm={6}>

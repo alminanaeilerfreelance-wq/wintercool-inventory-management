@@ -90,7 +90,7 @@ const inventorySchema = new mongoose.Schema(
       type: Number,
       default: 10,
     },
-    sku: {
+    serialNo: {
       type: String,
       trim: true,
     },

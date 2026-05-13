@@ -21,11 +21,13 @@ router.get('/', protect, async (req, res) => {
     // If noPagination=true, return all items without pagination
     if (noPagination) {
       const items = await Employee.find(query)
+        .populate('storeBranch', 'name address contact')
         .sort({ createdAt: -1 });
       return res.json({ items, total: items.length });
     }
 
     const items = await Employee.find(query)
+      .populate('storeBranch', 'name address contact')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -38,7 +40,7 @@ router.get('/', protect, async (req, res) => {
 // GET single
 router.get('/:id', protect, async (req, res) => {
   try {
-    const item = await Employee.findById(req.params.id);
+    const item = await Employee.findById(req.params.id).populate('storeBranch', 'name address contact');
     if (!item) return res.status(404).json({ message: 'Not found' });
     res.json(item);
   } catch (err) {
@@ -57,6 +59,7 @@ router.post('/', protect, async (req, res) => {
       email,
       contact,
       address,
+      storeBranch,
       hireDate,
       salary,
       status,
@@ -91,6 +94,7 @@ router.post('/', protect, async (req, res) => {
       email,
       contact,
       address,
+      storeBranch: storeBranch || undefined,
       hireDate,
       salary,
       status: status || "Active",
@@ -106,7 +110,13 @@ router.post('/', protect, async (req, res) => {
 // PUT update
 router.put('/:id', protect, async (req, res) => {
   try {
-    const item = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updatePayload = { ...req.body };
+    if (Object.prototype.hasOwnProperty.call(req.body, 'storeBranch')) {
+      updatePayload.storeBranch = req.body.storeBranch || undefined;
+    }
+
+    const item = await Employee.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true })
+      .populate('storeBranch', 'name address contact');
     if (!item) return res.status(404).json({ message: 'Not found' });
     res.json(item);
   } catch (err) {

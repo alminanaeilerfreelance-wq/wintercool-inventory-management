@@ -117,7 +117,10 @@ const normalizeStatus = (status) => {
 };
 
 const EMPTY_FORM = {
-  customerId: '',
+  customerName: '',
+  customerEmail: '',
+  customerContact: '',
+  customerAddress: '',
   employeeId: '',
   installerId: '',
   storeBranchId: '',
@@ -172,18 +175,23 @@ const [inventorySearch, setInventorySearch] = useState('');
 
 const fetchLookups = useCallback(async () => {
     try {
-      const [cRes, eRes, bRes, uRes] = await Promise.all([
+      const [cRes, eRes, bRes] = await Promise.all([
         api.get('/customers').catch(() => ({ data: [] })),
         api.get('/employees').catch(() => ({ data: [] })),
         api.get('/store-branches').catch(() => ({ data: [] })),
-        api.get('/users').catch(() => ({ data: [] })),
       ]);
       const norm = (r) => { const d = r.data?.data || r.data; return Array.isArray(d) ? d : d?.items || []; };
+      const employeeRows = norm(eRes);
       setCustomers(norm(cRes));
-      setEmployees(norm(eRes));
+      setEmployees(employeeRows);
       setStoreBranches(norm(bRes));
-      // Use users as installer options - they have position field from User model
-      setInstallers(norm(uRes));
+      const allowedInstallerPositions = ['installer', 'engineer', 'technician', 'duct installer'];
+      setInstallers(
+        employeeRows.filter((emp) => {
+          const pos = String(emp?.position || '').toLowerCase().trim();
+          return allowedInstallerPositions.includes(pos);
+        })
+      );
     } catch (err) {
       console.error('Error loading lookups:', err);
     }
@@ -229,7 +237,10 @@ const fetchLookups = useCallback(async () => {
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
 const openEdit = (row) => {
     setFormData({
-      customerId: row.customerId || row.customer?._id || '',
+      customerName: row.customerName || row.customer?.name || '',
+      customerEmail: row.customerEmail || row.customer?.email || '',
+      customerContact: row.customerContact || row.customer?.contact || row.customer?.phone || '',
+      customerAddress: row.customerAddress || row.customer?.address || '',
       employeeId: row.employeeId || row.employee?._id || '',
       installerId: row.installerId || row.installer?._id || '',
       storeBranchId: row.storeBranchId || row.storeBranch?._id || '',
@@ -237,6 +248,8 @@ const openEdit = (row) => {
       notes: row.notes || '',
       items: (row.items || []).map((it) => ({
         inventoryId: it.inventory?._id || it.inventory || it.inventoryId || '',
+        serialNo: it.serialNo || it.inventory?.serialNo || '',
+        barcode: it.barcode || it.inventory?.barcode || '',
         productName: it.itemName || it.productName || it.product?.name || '',
         unitPrice: it.price || it.unitPrice || 0,
         qty: it.quantity || it.qty || 1,
@@ -275,6 +288,8 @@ const openEdit = (row) => {
           ...p.items,
           {
             inventoryId: id,
+            serialNo: inv.serialNo || inv.serialNumber || inv.serial || '',
+            barcode: inv.barcode || inv.barCode || '',
             productName: String(productName),
             unitPrice: inv.srp || inv.unitPrice || 0,
             qty: 1,
@@ -295,6 +310,9 @@ const openEdit = (row) => {
     setFormData((p) => ({ ...p, items: p.items.filter((_, i) => i !== idx) }));
   };
 
+  const selectedEmployee = employees.find((e) => (e._id || e.id) === formData.employeeId) || null;
+  const selectedInstaller = installers.find((i) => (i._id || i.id) === formData.installerId) || null;
+
   const subtotal = formData.items.reduce((s, it) => s + (it.unitPrice * it.qty || 0), 0);
   const discount =
     formData.discountType === 'percent'
@@ -309,29 +327,53 @@ const openEdit = (row) => {
     formData.vatType === 'exclusive' ? afterDiscount : afterDiscount + vatAmount;
 
   const handleFormSubmit = async () => {
-    if (!formData.customerId) { enqueueSnackbar('Customer is required', { variant: 'warning' }); return; }
+    const trimmedName = String(formData.customerName || '').trim();
+    const trimmedEmail = String(formData.customerEmail || '').trim();
+    const trimmedContact = String(formData.customerContact || '').trim();
+    const trimmedAddress = String(formData.customerAddress || '').trim();
+
+    if (!trimmedName) { enqueueSnackbar('Customer name is required', { variant: 'warning' }); return; }
+    if (!trimmedEmail) { enqueueSnackbar('Customer email is required', { variant: 'warning' }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { enqueueSnackbar('Invalid customer email format', { variant: 'warning' }); return; }
+    if (!trimmedContact) { enqueueSnackbar('Customer contact is required', { variant: 'warning' }); return; }
+    if (!trimmedAddress) { enqueueSnackbar('Customer address is required', { variant: 'warning' }); return; }
+    if (!formData.items.length) { enqueueSnackbar('At least one product item is required', { variant: 'warning' }); return; }
+
+    const normalizedItems = formData.items
+      .map((item) => ({
+        inventory: item.inventoryId,
+        itemName: String(item.productName || '').trim(),
+        quantity: Number(item.qty) || 0,
+        price: Number(item.unitPrice) || 0,
+      }))
+      .filter((item) => item.inventory && item.quantity > 0 && item.price >= 0);
+
+    if (!normalizedItems.length) {
+      enqueueSnackbar('Please add valid items with quantity and price', { variant: 'warning' });
+      return;
+    }
+
     setFormLoading(true);
     try {
       const payload = {
         invoiceType: 'customer',
-        customerId: formData.customerId,
+        customerName: trimmedName,
+        customerEmail: trimmedEmail,
+        customerContact: trimmedContact,
+        customerAddress: trimmedAddress,
         employeeId: formData.employeeId || undefined,
         installerId: formData.installerId || undefined,
         storeBranchId: formData.storeBranchId || undefined,
-        items: formData.items.map((item) => ({
-          inventory: item.inventoryId,
-          itemName: item.productName,
-          quantity: item.qty,
-          price: item.unitPrice,
-        })),
+        items: normalizedItems,
         notes: formData.notes,
         discountType: formData.discountType,
-        discount,
+        discount: Number(discount) || 0,
         vatType: formData.vatType,
-        vatRate: 0.12,
-        subtotal,
-        vatAmount,
-        total: grandTotal,
+        vatRate: 12,
+        subtotal: Number(subtotal) || 0,
+        vatAmount: Number(vatAmount) || 0,
+        total: Number(grandTotal) || 0,
+        paymentStatus: String(formData.paymentStatus || 'Pending').toLowerCase(),
       };
 
       // Add calendar event data if enabled
@@ -589,19 +631,19 @@ const openEdit = (row) => {
           loading={formLoading}
           maxWidth="lg"
         >
+
+        <hr></hr>
+
           <Grid container spacing={2} mt={0.5}>
             {/* Header Fields */}
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Customer</InputLabel>
-                <Select value={formData.customerId} label="Customer" onChange={setF('customerId')}>
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {customers.map((c) => {
-                    const name = String(c?.name || c?.companyName || '—');
-                    return <MenuItem key={c._id || c.id} value={c._id || c.id}>{name}</MenuItem>;
-                  })}
-                </Select>
-              </FormControl>
+              <TextField
+                label="Customer Name"
+                fullWidth
+                size="small"
+                value={formData.customerName}
+                onChange={setF('customerName')}
+              />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
@@ -622,12 +664,12 @@ const openEdit = (row) => {
                 <InputLabel>Installer</InputLabel>
                 <Select value={formData.installerId} label="Installer" onChange={setF('installerId')}>
                   <MenuItem value=""><em>None</em></MenuItem>
-                  {employees.map((e) => {
-                    const name = String(e?.name || e?.firstName || '—');
-                    const position = e?.position || '';
-                    const display = position ? `${name} (${position})` : name;
-                    return <MenuItem key={e._id || e.id} value={e._id || e.id}>{display}</MenuItem>;
-                  })}
+                {installers.map((e) => {
+                  const name = String(e?.name || e?.firstName || '—');
+                  const position = e?.position || '';
+                  const display = position ? `${name} (${position})` : name;
+                  return <MenuItem key={e._id || e.id} value={e._id || e.id}>{display}</MenuItem>;
+                })}
                 </Select>
               </FormControl>
             </Grid>
@@ -651,6 +693,63 @@ const openEdit = (row) => {
                 slotProps={{ textField: { fullWidth: true, size: 'small' } }}
               />
             </Grid>
+            <Grid item xs={12}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1}>Customer Details</Typography>
+                    <TextField
+                      label="Email"
+                      fullWidth
+                      size="small"
+                      value={formData.customerEmail}
+                      onChange={setF('customerEmail')}
+                      sx={{ mb: 1 }}
+                    />
+                    <TextField
+                      label="Contact"
+                      fullWidth
+                      size="small"
+                      value={formData.customerContact}
+                      onChange={setF('customerContact')}
+                      sx={{ mb: 1 }}
+                    />
+                    <TextField
+                      label="Address"
+                      fullWidth
+                      size="small"
+                      value={formData.customerAddress}
+                      onChange={setF('customerAddress')}
+                    />
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1}>Employee Details</Typography>
+                    <Typography variant="body2">Name: {selectedEmployee?.name || selectedEmployee?.firstName || '—'}</Typography>
+                    <Typography variant="body2">Store Branch: {selectedEmployee?.storeBranch?.name || selectedEmployee?.storeBranchName || '—'}</Typography>
+                    <Typography variant="body2">Contact: {selectedEmployee?.contact || selectedEmployee?.phone || '—'}</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1}>Installer Details</Typography>
+                    <Typography variant="body2">Name: {selectedInstaller?.name || selectedInstaller?.firstName || '—'}</Typography>
+                    <Typography variant="body2">Contact: {selectedInstaller?.contact || selectedInstaller?.phone || '—'}</Typography>
+                    <Typography variant="body2">Store Branch: {selectedInstaller?.storeBranch?.name || selectedInstaller?.storeBranchName || '—'}</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12}>
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1}>Store Branch Details</Typography>
+                    <Typography variant="body2">Branch Name: {storeBranches.find((b) => (b._id || b.id) === formData.storeBranchId)?.name || '—'}</Typography>
+                    <Typography variant="body2">Contact: {storeBranches.find((b) => (b._id || b.id) === formData.storeBranchId)?.contact || '—'}</Typography>
+                    <Typography variant="body2">Address: {storeBranches.find((b) => (b._id || b.id) === formData.storeBranchId)?.address || '—'}</Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Grid>
+
             <Grid item xs={12}>
               <TextField
                 label="Notes"
@@ -733,9 +832,11 @@ const openEdit = (row) => {
                     prodName = inv.productName.name;
                   }
                   
+                  const serialNo = inv.serialNo || inv.serialNumber || inv.serial || '—';
+                  const barcode = inv.barcode || inv.barCode || '—';
                   const prodSRP = inv.srp || inv.unitPrice || 0;
                   const prodQty = inv.quantity || 0;
-                  
+
                   return (
                     <Box
                       key={inv._id || inv.id}
@@ -743,7 +844,7 @@ const openEdit = (row) => {
                       onClick={() => addItemToCart(inv)}
                     >
                       <Typography variant="body2">
-                        {String(prodName)} — SRP: {fmt(prodSRP)} — Qty: {prodQty}
+                               {String(serialNo)} — {String(barcode)} — {String(prodName)} — SRP: {fmt(prodSRP)} — Qty: {prodQty}
                       </Typography>
                     </Box>
                   );
@@ -754,8 +855,10 @@ const openEdit = (row) => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Unit Price</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Serial No</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Barcode</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Product Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>SRP</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Qty</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
                       <TableCell />
@@ -771,6 +874,8 @@ const openEdit = (row) => {
                     ) : (
                       formData.items.map((it, idx) => (
                         <TableRow key={idx}>
+                          <TableCell>{String(it?.serialNo || '—')}</TableCell>
+                          <TableCell>{String(it?.barcode || '—')}</TableCell>
                           <TableCell>{String(it?.productName || '—')}</TableCell>
                           <TableCell>
                             <TextField size="small" type="number" value={it?.unitPrice || 0}

@@ -26,11 +26,14 @@ import AdminConfirmDialog from '../../components/Common/AdminConfirmDialog';
 import { getCRUD } from '../../utils/api';
 
 const api = getCRUD('employees');
+const branchApi = getCRUD('store-branches');
+
 const EMPTY_FORM = {
   employeeId: '',
   name: '',
   position: '',
   department: '',
+  storeBranch: '',
   email: '',
   contact: '',
   address: '',
@@ -53,7 +56,7 @@ export default function EmployeesPage() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-
+  const [storeBranches, setStoreBranches] = useState([]);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -75,6 +78,20 @@ export default function EmployeesPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    const fetchStoreBranches = async () => {
+      try {
+        const res = await branchApi.getAll({ noPagination: true });
+        const data = res.data?.data || res.data;
+        const items = Array.isArray(data) ? data : data?.items || [];
+        setStoreBranches(items);
+      } catch {
+        setStoreBranches([]);
+      }
+    };
+    fetchStoreBranches();
+  }, []);
+
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
   const openEdit = (row) => {
     setFormData({
@@ -82,6 +99,7 @@ export default function EmployeesPage() {
       name: row.name || '',
       position: row.position || '',
       department: row.department || '',
+      storeBranch: row.storeBranch?._id || row.storeBranch || '',
       email: row.email || '',
       contact: row.contact || '',
       address: row.address || '',
@@ -150,6 +168,12 @@ export default function EmployeesPage() {
     { field: 'name', headerName: 'Name' },
     { field: 'position', headerName: 'Position' },
     { field: 'department', headerName: 'Department' },
+    {
+      field: 'storeBranch',
+      headerName: 'Store Branch',
+      renderCell: ({ row }) => row.storeBranch?.name || '—',
+    },
+    
     
     {
       field: 'status',
@@ -312,6 +336,25 @@ const DEFAULT_POSITION_COLOR = 'default';
             </Grid>
           <Grid item xs={12} sm={6}>
             <TextField label="Department" value={formData.department} onChange={handleChange('department')} fullWidth />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth>
+              <InputLabel>Store Branch</InputLabel>
+              <Select
+                value={formData.storeBranch}
+                label="Store Branch"
+                onChange={handleChange('storeBranch')}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {storeBranches.map((branch) => (
+                  <MenuItem key={branch._id || branch.id} value={branch._id || branch.id}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField label="Email" type="email" value={formData.email} onChange={handleChange('email')} fullWidth />

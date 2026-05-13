@@ -5,8 +5,42 @@ const Inventory = require('../models/Inventory');
 const { protect } = require('../middleware/auth');
 const { updateStockStatus } = require('../utils/stockStatus');
 
+const normalizeSerialNo = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const s = String(value).trim();
+  if (!s) return undefined;
+  return s.toUpperCase();
+};
+
+const normalizeBarcode = (value) => {
+  if (value === undefined || value === null) return undefined;
+  const s = String(value).trim();
+  if (!s) return undefined;
+  return s;
+};
+
+const validateUniqueSerialAndBarcode = async ({ serialNo, barcode, ignoreId }) => {
+  const normalizedSerialNo = normalizeSerialNo(serialNo);
+  const normalizedBarcode = normalizeBarcode(barcode);
+
+  const or = [];
+  if (normalizedSerialNo) or.push({ serialNo: normalizedSerialNo });
+  if (normalizedBarcode) or.push({ barcode: normalizedBarcode });
+  if (or.length === 0) return;
+
+  const query = ignoreId ? { _id: { $ne: ignoreId }, $or: or } : { $or: or };
+  const existing = await Inventory.find(query).select({ serialNo: 1, barcode: 1 }).lean();
+
+  if (normalizedSerialNo && existing.some((d) => d.serialNo === normalizedSerialNo)) {
+    throw new Error('Serial No already exists. Please use a unique Serial No.');
+  }
+  if (normalizedBarcode && existing.some((d) => d.barcode === normalizedBarcode)) {
+    throw new Error('Barcode already exists. Please use a unique Barcode.');
+  }
+};
+
 const populateFields = [
-  { path: 'sku' },
+  { path: 'serialNo' },
   { path: 'barcode' },
   { path: 'brand' },
   { path: 'design' },
@@ -45,7 +79,7 @@ router.post('/export/excel', protect, async (req, res) => {
       .lean();
 
     const rows = items.map((item) => ({
-      SKU: item.sku || '',
+      serialNo: item.serialNo || '',
       Barcode: item.barcode || '',
       Brand: item.brand?.name || '',
       Design: item.design?.name || '',
@@ -159,7 +193,7 @@ router.get('/', protect, async (req, res) => {
               { 'rackDoc.name': { $regex: search, $options: 'i' } },
               { 'locationDoc.name': { $regex: search, $options: 'i' } },
               { 'warehouseDoc.name': { $regex: search, $options: 'i' } },
-              { sku: { $regex: search, $options: 'i' } },
+              { serialNo: { $regex: search, $options: 'i' } },
               { barcode: { $regex: search, $options: 'i' } },
             ],
           },
@@ -232,6 +266,16 @@ router.post('/', protect, async (req, res) => {
   try {
     const data = { ...req.body };
 
+    // Normalize serial/barcode & validate uniqueness before create
+    if (data.serialNo !== undefined) data.serialNo = normalizeSerialNo(data.serialNo);
+    if (data.barcode !== undefined) data.barcode = normalizeBarcode(data.barcode);
+
+    await validateUniqueSerialAndBarcode({
+      serialNo: data.serialNo,
+      barcode: data.barcode,
+      ignoreId: null,
+    });
+
     // Field mapping: convert xxxId to field names
     if (data.brandId) data.brand = data.brandId;
     if (data.designId) data.design = data.designId;
@@ -267,6 +311,16 @@ router.post('/', protect, async (req, res) => {
 router.put('/:id', protect, async (req, res) => {
   try {
     const data = { ...req.body };
+
+    // Normalize serial/barcode & validate uniqueness before update
+    if (data.serialNo !== undefined) data.serialNo = normalizeSerialNo(data.serialNo);
+    if (data.barcode !== undefined) data.barcode = normalizeBarcode(data.barcode);
+
+    await validateUniqueSerialAndBarcode({
+      serialNo: data.serialNo,
+      barcode: data.barcode,
+      ignoreId: req.params.id,
+    });
 
     // Field mapping: convert xxxId to field names
     if (data.brandId) data.brand = data.brandId;
@@ -313,7 +367,7 @@ router.post('/bulk-import', protect, async (req, res) => {
     }
 
     const results = { imported: 0, failed: 0, errors: [] };
-    const requiredFields = ['productName', 'warehouse', 'category', 'zone', 'bin', 'location'];
+    const requiredFields = ['serialNo', 'barcode', 'productName', 'warehouse', 'category', 'zone', 'bin', 'location','brand','supplier','rack'];
 
     for (let i = 0; i < items.length; i++) {
       const row = items[i];
@@ -327,6 +381,16 @@ router.post('/bulk-import', protect, async (req, res) => {
         const srp = Number(row.srp) || 0;
 
         const data = { ...row };
+
+        // Normalize serial/barcode & validate uniqueness before inserting
+        if (data.serialNo !== undefined) data.serialNo = normalizeSerialNo(data.serialNo);
+        if (data.barcode !== undefined) data.barcode = normalizeBarcode(data.barcode);
+
+        await validateUniqueSerialAndBarcode({
+          serialNo: data.serialNo,
+          barcode: data.barcode,
+          ignoreId: null,
+        });
         if (data.productNameId) data.productName = data.productNameId;
         if (data.warehouseId) data.warehouse = data.warehouseId;
         if (data.categoryId) data.category = data.categoryId;

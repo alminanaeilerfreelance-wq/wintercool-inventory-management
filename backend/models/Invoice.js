@@ -47,6 +47,23 @@ const invoiceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Customer',
     },
+    customerName: {
+      type: String,
+      trim: true,
+    },
+    customerEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    customerContact: {
+      type: String,
+      trim: true,
+    },
+    customerAddress: {
+      type: String,
+      trim: true,
+    },
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Supplier',

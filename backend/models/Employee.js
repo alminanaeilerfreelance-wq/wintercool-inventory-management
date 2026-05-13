@@ -41,6 +41,10 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    storeBranch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StoreBranch',
+    },
     salary: {
       type: Number,
     },

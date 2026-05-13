@@ -55,8 +55,32 @@ const calculateTotals = (subtotal, discount = 0, discountType = 'fixed', vatType
 
 const normalizePaymentStatus = (status) => {
   if (!status) return 'pending';
-  return String(status).toLowerCase();
+  const normalized = String(status).toLowerCase();
+  const allowed = ['pending', 'open', 'paid', 'cancelled', 'due'];
+  return allowed.includes(normalized) ? normalized : 'pending';
 };
+
+const parseNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const sanitizeInvoiceItems = (items = []) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const quantity = Math.max(0, parseNumber(item.quantity, 0));
+      const price = Math.max(0, parseNumber(item.price, 0));
+      const subtotal = quantity * price;
+      return {
+        inventory: item.inventory || undefined,
+        service: item.service || undefined,
+        itemName: item.itemName || '',
+        quantity,
+        price,
+        subtotal,
+      };
+    })
+    .filter((item) => item.quantity > 0 && item.price >= 0);
 
 const decrementTypes = ['customer', 'service', 'sub-dealer'];
 
@@ -168,6 +192,10 @@ router.post('/', protect, async (req, res) => {
       invoiceType,
       customerId,
       customer,
+      customerName,
+      customerEmail,
+      customerContact,
+      customerAddress,
       subDealerId,
       subDealer,
       supplierId,
@@ -190,16 +218,32 @@ router.post('/', protect, async (req, res) => {
 
     const invoiceNo = generateInvoiceNo();
 
-    // Calculate subtotal from items
-    const subtotal = items.reduce((sum, item) => {
-      const qty = Number(item.quantity) || 0;
-      const price = Number(item.price) || 0;
-      const itemSubtotal = qty * price;
-      item.subtotal = itemSubtotal;
-      return sum + itemSubtotal;
-    }, 0);
+    const normalizedDiscountType = discountType === 'percent' ? 'percent' : 'fixed';
+    const normalizedVatType = ['inclusive', 'exclusive', 'none'].includes(vatType) ? vatType : 'none';
+    const normalizedVatRate = Math.max(0, parseNumber(vatRate, 0));
+    const normalizedDiscount = Math.max(0, parseNumber(discount, 0));
+    const normalizedItems = sanitizeInvoiceItems(items);
 
-    const { vatAmount, total } = calculateTotals(subtotal, discount, discountType, vatType, vatRate);
+    if (!normalizedItems.length) {
+      return res.status(400).json({ message: 'At least one valid item is required' });
+    }
+
+    if (invoiceType === 'customer') {
+      if (!customerName || !String(customerName).trim()) {
+        return res.status(400).json({ message: 'Customer name is required' });
+      }
+    }
+
+    // Calculate subtotal from items
+    const subtotal = normalizedItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+    const { vatAmount, total } = calculateTotals(
+      subtotal,
+      normalizedDiscount,
+      normalizedDiscountType,
+      normalizedVatType,
+      normalizedVatRate
+    );
 
     const qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoices/preview/${invoiceNo}`;
     const qrCode = await generateQRCode(qrData);
@@ -219,12 +263,16 @@ router.post('/', protect, async (req, res) => {
       installer: resolvedInstaller,
       storeBranch: storeBranchId || storeBranch,
       warehouse: warehouseId || warehouse,
-      items,
+      customerName: customerName || undefined,
+      customerEmail: customerEmail || undefined,
+      customerContact: customerContact || undefined,
+      customerAddress: customerAddress || undefined,
+      items: normalizedItems,
       subtotal,
-      discount,
-      discountType,
+      discount: normalizedDiscount,
+      discountType: normalizedDiscountType,
       vatAmount,
-      vatType,
+      vatType: normalizedVatType,
       total,
       notes,
       paymentStatus: normalizePaymentStatus(paymentStatus) || 'pending',
@@ -255,7 +303,7 @@ router.post('/', protect, async (req, res) => {
 
     if (decrementTypes.includes(invoiceType)) {
       await Promise.all(
-        items.map(async (item) => {
+        normalizedItems.map(async (item) => {
           const inventoryId = item.inventory?._id || item.inventory;
           const qty = Number(item.quantity) || 0;
           if (!inventoryId || qty <= 0) return;
@@ -286,6 +334,10 @@ router.put('/:id', protect, async (req, res) => {
       invoiceType,
       customerId,
       customer,
+      customerName,
+      customerEmail,
+      customerContact,
+      customerAddress,
       subDealerId,
       subDealer,
       supplierId,
@@ -313,11 +365,25 @@ router.put('/:id', protect, async (req, res) => {
     if (storeBranchId || storeBranch) updateData.storeBranch = storeBranchId || storeBranch;
     if (warehouseId || warehouse) updateData.warehouse = warehouseId || warehouse;
     if (invoiceType) updateData.invoiceType = invoiceType;
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (customerEmail !== undefined) updateData.customerEmail = customerEmail;
+    if (customerContact !== undefined) updateData.customerContact = customerContact;
+    if (customerAddress !== undefined) updateData.customerAddress = customerAddress;
 
     const newInvoiceType = invoiceType || existing.invoiceType;
     const oldInvoiceType = existing.invoiceType;
 
     if (items) {
+      const normalizedItems = sanitizeInvoiceItems(items);
+      if (!normalizedItems.length) {
+        return res.status(400).json({ message: 'At least one valid item is required' });
+      }
+
+      const normalizedDiscountType = discountType === 'percent' ? 'percent' : (existing.discountType || 'fixed');
+      const normalizedVatType = ['inclusive', 'exclusive', 'none'].includes(vatType) ? vatType : (existing.vatType || 'none');
+      const normalizedDiscount = discount !== undefined ? Math.max(0, parseNumber(discount, 0)) : parseNumber(existing.discount, 0);
+      const normalizedVatRate = vatRate !== undefined ? Math.max(0, parseNumber(vatRate, 0)) : 0;
+
       if (decrementTypes.includes(oldInvoiceType)) {
         await Promise.all(
           existing.items.map(async (item) => {
@@ -331,7 +397,7 @@ router.put('/:id', protect, async (req, res) => {
 
       if (decrementTypes.includes(newInvoiceType)) {
         await Promise.all(
-          items.map(async (item) => {
+          normalizedItems.map(async (item) => {
             const inventoryId = item.inventory?._id || item.inventory;
             const qty = Number(item.quantity) || 0;
             if (!inventoryId || qty <= 0) return;
@@ -340,24 +406,22 @@ router.put('/:id', protect, async (req, res) => {
         );
       }
 
-      const itemsWithSubtotals = items.map((item) => ({
-        ...item,
-        subtotal: (Number(item.quantity) || 0) * (Number(item.price) || 0),
-      }));
-
-      const subtotal = itemsWithSubtotals.reduce((sum, i) => sum + i.subtotal, 0);
+      const subtotal = normalizedItems.reduce((sum, i) => sum + i.subtotal, 0);
       const { vatAmount, total } = calculateTotals(
         subtotal,
-        discount !== undefined ? discount : existing.discount,
-        discountType || existing.discountType,
-        vatType || existing.vatType,
-        vatRate !== undefined ? vatRate : 0
+        normalizedDiscount,
+        normalizedDiscountType,
+        normalizedVatType,
+        normalizedVatRate
       );
 
-      updateData.items = itemsWithSubtotals;
+      updateData.items = normalizedItems;
       updateData.subtotal = subtotal;
       updateData.vatAmount = vatAmount;
       updateData.total = total;
+      updateData.discount = normalizedDiscount;
+      updateData.discountType = normalizedDiscountType;
+      updateData.vatType = normalizedVatType;
     } else if (invoiceType && invoiceType !== oldInvoiceType) {
       if (decrementTypes.includes(oldInvoiceType) && !decrementTypes.includes(newInvoiceType)) {
         await Promise.all(
