@@ -216,16 +216,16 @@ export default function EmployeesPage() {
 // };
 
 const POSITION_OPTIONS = [
-  { value:'Accounting Officer',label: 'Accounting Officer'},
-  { value:'Manager' , label: 'Manager'},
-  { value: 'Installer', label: 'Installer'},
-  { value: 'Sales Representative', label: 'Sales Representative'},
-  { value: 'Casher', label: 'Casher'},
-  { value: 'Supervisor', label: 'Supervisor'},
-  { value: 'Admin', label: 'Admin'},
-  { value: 'Engineer', label: 'Engineer'},
-  { value: 'Technicaian', label: 'Technician'},
-  { value: 'Duct Installer', label: 'Duct Installer'},
+  { value: 'Accounting Officer', label: 'Accounting Officer' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'Installer', label: 'Installer' },
+  { value: 'Sales Representative', label: 'Sales Representative' },
+  { value: 'Cashier', label: 'Cashier' },
+  { value: 'Supervisor', label: 'Supervisor' },
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Engineer', label: 'Engineer' },
+  { value: 'Technician', label: 'Technician' },
+  { value: 'Duct Installer', label: 'Duct Installer' },
 ];
 
 // Position colors mapping - each position gets a unique color indicator

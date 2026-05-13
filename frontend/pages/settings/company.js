@@ -24,7 +24,7 @@ import { getSettings, updateCompany } from '../../utils/api';
 const EMPTY_FORM = {
   name: '',
   slogan: '',
-  phone: '',
+  contactNumber: '',
   address: '',
   tinNo: '',
   licenseNo: '',
@@ -50,7 +50,7 @@ export default function CompanySettingsPage() {
         setForm({
           name: company.name || '',
           slogan: company.slogan || '',
-          phone: company.phone || company.contact || '',
+          contactNumber: company.contactNumber || company.phone || company.contact || '',
           address: company.address || '',
           tinNo: company.tinNo || company.tin || '',
           licenseNo: company.licenseNo || company.license || '',
@@ -69,8 +69,8 @@ export default function CompanySettingsPage() {
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      enqueueSnackbar('Logo must be under 2MB', { variant: 'warning' });
+    if (file.size > 10 * 1024 * 1024) {
+      enqueueSnackbar('Logo must be under 10MB', { variant: 'warning' });
       return;
     }
     setLogoFile(file);
@@ -162,7 +162,7 @@ export default function CompanySettingsPage() {
                 onClick={() => fileRef.current.click()}
                 size="small"
               >
-                Upload Logo (max 2MB)
+                Upload Logo (max 10MB)
               </Button>
             </Grid>
 
@@ -187,8 +187,8 @@ export default function CompanySettingsPage() {
               <TextField
                 label="Contact Number"
                 fullWidth
-                value={form.phone}
-                onChange={setF('phone')}
+                value={form.contactNumber}
+                onChange={setF('contactNumber')}
               />
             </Grid>
             <Grid item xs={12} sm={6}>

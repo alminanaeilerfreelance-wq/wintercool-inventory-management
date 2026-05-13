@@ -49,6 +49,19 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
   const items = invoice.items || [];
   const status = normalizeStatus(invoice.paymentStatus || invoice.status);
 
+  const customerName = invoice.customer?.name || invoice.subDealer?.name || invoice.customerName || invoice.subDealerName || '—';
+  const customerEmail = invoice.customer?.email || invoice.subDealer?.email || invoice.customerEmail || invoice.subDealerEmail || '—';
+  const customerAddress = invoice.customer?.address || invoice.subDealer?.address || invoice.customerAddress || invoice.subDealerAddress || '—';
+  const customerContact = invoice.customer?.contact || invoice.customer?.phone || invoice.subDealer?.contact || invoice.subDealer?.phone || invoice.customerContact || invoice.subDealerContact || '—';
+
+  const employeeName = invoice.employee?.name || invoice.employeeName || '—';
+  const employeeBranch = invoice.employee?.storeBranch?.name || invoice.employee?.storeBranchName || invoice.storeBranch?.name || invoice.branchName || '—';
+  const employeeContact = invoice.employee?.contact || invoice.employee?.phone || invoice.employeeContact || '—';
+
+  const installerName = invoice.installer?.name || invoice.installerName || '—';
+  const installerContact = invoice.installer?.contact || invoice.installer?.phone || invoice.installerContact || '—';
+  const installerBranch = invoice.installer?.storeBranch?.name || invoice.installer?.storeBranchName || invoice.storeBranch?.name || invoice.branchName || '—';
+
   const qrString =
     qrValue ||
     JSON.stringify({
@@ -138,94 +151,104 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
 
       <Divider sx={{ mb: 2 }} />
 
-{/* Invoice Details */}
-      <Stack direction="row" justifyContent="space-between" mb={2}>
-        <Box>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: 12 }}>Bill To:</Typography>
-          <Typography variant="body2" sx={{ fontSize: 12 }}>
-            {invoice.customer?.name || invoice.subDealer?.name || invoice.customerName || invoice.subDealerName || '—'}
+      {/* Invoice Details */}
+      <Box
+        sx={{
+          mb: 2,
+          p: 1.5,
+          border: '1px solid',
+          borderColor: 'grey.300',
+          borderRadius: 1.5,
+          bgcolor: 'grey.50',
+        }}
+      >
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ fontSize: 13, letterSpacing: 0.4 }}>
+            INVOICE DETAILS
           </Typography>
-          {(invoice.customer?.address || invoice.subDealer?.address || invoice.customerAddress || invoice.subDealerAddress) && (
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>
-              {invoice.customer?.address || invoice.subDealer?.address || invoice.customerAddress || invoice.subDealerAddress}
+          <Box textAlign="right">
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}>
+              <strong>Date:</strong> {invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MMM DD, YYYY') : '—'}
             </Typography>
-          )}
-        </Box>
-        <Box textAlign="right">
-          <Typography variant="body2" sx={{ fontSize: 12 }}>
-            <strong>Date:</strong>{' '}
-            {invoice.invoiceDate ? dayjs(invoice.invoiceDate).format('MMM DD, YYYY') : '—'}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: 12 }}>
-            <strong>Company Contact:</strong>{' '}
-            {company?.phone || company?.contact || '—'}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: 12 }}>
-            <strong>Employee:</strong>{' '}
-            {invoice.employee?.name || invoice.employeeName || '—'}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: 12 }}>
-            <strong>Installer:</strong>{' '}
-            {invoice.installer?.name || invoice.installerName || '—'}
-          </Typography>
-          {(invoice.installer?.contact || invoice.installerContact) && (
-            <Typography variant="body2" sx={{ fontSize: 12 }}>
-              <strong>Installer Contact:</strong>{' '}
-              {invoice.installer?.contact || invoice.installerContact || '—'}
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}>
+              <strong>Company Contact:</strong> {company?.phone || company?.contact || '—'}
             </Typography>
-          )}
-<Typography variant="body2" sx={{ fontSize: 12 }}>
-            <strong>Branch:</strong>{' '}
-            {invoice.storeBranch?.name || invoice.branchName || '—'}
-          </Typography>
-          {(invoice.storeBranch?.contact || invoice.storeBranchContact) && (
-            <Typography variant="body2" sx={{ fontSize: 12 }}>
-              <strong>Branch Contact:</strong>{' '}
-              {invoice.storeBranch?.contact || invoice.storeBranchContact || '—'}
-            </Typography>
-          )}
-        </Box>
-      </Stack>
+          </Box>
+        </Stack>
+
+        <Stack direction="row" spacing={1.5} sx={{ '& > *': { flex: 1 } }}>
+          <Box sx={{ p: 1.25, bgcolor: '#fff', border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: 11.5, mb: 0.75, color: 'primary.main' }}>Customer Details</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Name:</strong> {customerName}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Email:</strong> {customerEmail}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Address:</strong> {customerAddress}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Contact:</strong> {customerContact}</Typography>
+          </Box>
+
+          <Box sx={{ p: 1.25, bgcolor: '#fff', border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: 11.5, mb: 0.75, color: 'primary.main' }}>Employee Details</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Name:</strong> {employeeName}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Store Branch:</strong> {employeeBranch}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Contact:</strong> {employeeContact}</Typography>
+          </Box>
+
+          <Box sx={{ p: 1.25, bgcolor: '#fff', border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+            <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: 11.5, mb: 0.75, color: 'primary.main' }}>Installer Details</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Name:</strong> {installerName}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Contact:</strong> {installerContact}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11.5 }}><strong>Store Branch:</strong> {installerBranch}</Typography>
+          </Box>
+        </Stack>
+      </Box>
 
       {/* Items Table */}
-      <Table size="small" sx={{ mb: 2 }}>
+      <Table size="small" sx={{ mb: 2, border: '1px solid', borderColor: 'grey.300' }}>
         <TableHead>
-          <TableRow sx={{ bgcolor: 'grey.100' }}>
-            <TableCell sx={{ fontWeight: 700, fontSize: 11 }}>No</TableCell>
-            <TableCell sx={{ fontWeight: 700, fontSize: 11 }}>Description</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 700, fontSize: 11 }}>Qty</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11 }}>Unit Price</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11 }}>Total</TableCell>
+          <TableRow sx={{ bgcolor: 'primary.main' }}>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Serial No</TableCell>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Product Name</TableCell>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Service</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>SRP</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Qty</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Total</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} align="center" sx={{ fontSize: 11 }}>No items</TableCell>
+              <TableCell colSpan={6} align="center" sx={{ fontSize: 11 }}>No items</TableCell>
             </TableRow>
           ) : (
-            items.map((item, idx) => (
-              <TableRow key={idx} sx={{ '&:nth-of-type(even)': { bgcolor: 'grey.50' } }}>
-                <TableCell sx={{ fontSize: 11 }}>{idx + 1}</TableCell>
-                <TableCell sx={{ fontSize: 11 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontSize: 11, fontWeight: 600 }}>
-                      {item.itemName || item.productName || item.serviceName || item.inventory?.product?.name || item.product?.name || item.service?.name || '—'}
-                    </Typography>
-                    {(item.service?.description || item.description || item.inventory?.product?.description) && (
-                      <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary' }}>
-                        {item.service?.description || item.description || item.inventory?.product?.description || ''}
-                      </Typography>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell align="center" sx={{ fontSize: 11 }}>{item.quantity || item.qty || 1}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 11 }}>{fmt(item.price || item.unitPrice || 0)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 11 }}>
-                  {fmt((item.price || item.unitPrice || 0) * (item.quantity || item.qty || 1))}
-                </TableCell>
-              </TableRow>
-            ))
+            items.map((item, idx) => {
+              const serialNo = item.serialNo || item.inventory?.serialNo || item.inventory?.serialNumber || item.inventory?.serial || '—';
+              const productName =
+                item.itemName ||
+                item.productName ||
+                item.inventory?.product?.name ||
+                item.inventory?.productName?.name ||
+                item.inventory?.productName ||
+                item.product?.name ||
+                '—';
+              const serviceName =
+                item.serviceName ||
+                item.service?.name ||
+                item.serviceTitle ||
+                '—';
+              const srp = Number(item.price || item.unitPrice || item.srp || 0);
+              const qty = Number(item.quantity || item.qty || 1);
+              const lineTotal = srp * qty;
+
+              return (
+                <TableRow key={idx} sx={{ '&:nth-of-type(even)': { bgcolor: 'grey.50' } }}>
+                  <TableCell sx={{ fontSize: 11 }}>{String(serialNo)}</TableCell>
+                  <TableCell sx={{ fontSize: 11 }}>{String(productName)}</TableCell>
+                  <TableCell sx={{ fontSize: 11 }}>{String(serviceName)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 11 }}>{fmt(srp)}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 11 }}>{qty}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 11 }}>{fmt(lineTotal)}</TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -249,7 +272,7 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
 
         <Box>
           {/* Totals Section */}
-          <Box sx={{ minWidth: 220, mb: 2 }}>
+          <Box sx={{ minWidth: 260, mb: 2, p: 1.5, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, bgcolor: 'grey.50' }}>
             <Stack spacing={0.5}>
               <Stack direction="row" justifyContent="space-between">
                 <Typography variant="body2" sx={{ fontSize: 12 }}>Subtotal</Typography>

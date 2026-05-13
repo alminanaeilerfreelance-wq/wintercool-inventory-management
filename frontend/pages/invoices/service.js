@@ -113,7 +113,10 @@ const normalizeStatus = (status) => {
 };
 
 const EMPTY_FORM = {
-  customerId: '',
+  customerName: '',
+  customerEmail: '',
+  customerContact: '',
+  customerAddress: '',
   employeeId: '',
   installerId: '',
   storeBranchId: '',
@@ -140,11 +143,12 @@ export default function ServiceInvoicesPage() {
   const [showDeadlineAlert, setShowDeadlineAlert] = useState(false);
   const [upcomingInvoices, setUpcomingInvoices] = useState([]);
 
-  const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [storeBranches, setStoreBranches] = useState([]);
   const [services, setServices] = useState([]);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [products, setProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
   const [installers, setInstallers] = useState([]);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -167,16 +171,27 @@ export default function ServiceInvoicesPage() {
 
   const fetchLookups = useCallback(async () => {
     try {
-      const [cRes, eRes, bRes] = await Promise.all([
+      const [, eRes, bRes] = await Promise.all([
         api.get('/customers').catch(() => ({ data: [] })),
         api.get('/employees').catch(() => ({ data: [] })),
         api.get('/store-branches').catch(() => ({ data: [] })),
       ]);
       const norm = (r) => { const d = r.data?.data || r.data; return Array.isArray(d) ? d : d?.items || []; };
-      setCustomers(norm(cRes));
-      setEmployees(norm(eRes));
+      const employeeRows = norm(eRes);
+      setEmployees(employeeRows);
       setStoreBranches(norm(bRes));
-      setInstallers(norm(eRes)); // Assuming installers are also employees; adjust if there's a separate endpoint
+      setInstallers(
+        employeeRows.filter((emp) => {
+          const pos = String(emp?.position || '').toLowerCase().trim();
+          return (
+            pos.includes('installer') ||
+            pos.includes('duct') ||
+            pos.includes('ducker') ||
+            pos.includes('engineer') ||
+            pos.includes('enger')
+          );
+        })
+      );
     } catch (err) {
       console.error('Error loading lookups:', err);
     }
@@ -191,6 +206,17 @@ export default function ServiceInvoicesPage() {
       console.error('Error loading services:', err);
     }
   }, [serviceSearch]);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await api.get('/products', { params: { search: productSearch, limit: 50 } });
+      const d = res.data?.data || res.data;
+      setProducts(Array.isArray(d) ? d : d?.items || d?.products || []);
+    } catch (err) {
+      console.error('Error loading products:', err);
+      setProducts([]);
+    }
+  }, [productSearch]);
 
   const checkUpcomingDeadlines = useCallback((invoices) => {
     const now = dayjs();
@@ -234,21 +260,34 @@ export default function ServiceInvoicesPage() {
   useEffect(() => { fetchLookups(); }, [fetchLookups]);
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { if (formOpen) fetchServices(); }, [formOpen, fetchServices]);
+  useEffect(() => { if (formOpen) fetchProducts(); }, [formOpen, fetchProducts]);
 
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
   const openEdit = (row) => {
     setFormData({
-      customerId: row.customerId || row.customer?._id || '',
+      customerName: row.customerName || row.customer?.name || '',
+      customerEmail: row.customerEmail || row.customer?.email || '',
+      customerContact: row.customerContact || row.customer?.contact || row.customer?.phone || '',
+      customerAddress: row.customerAddress || row.customer?.address || '',
       employeeId: row.employeeId || row.employee?._id || '',
       storeBranchId: row.storeBranchId || row.storeBranch?._id || '',
-      installerId: row.installed || row.installer?._id || '',
+      installerId: row.installerId || row.installer?._id || '',
       invoiceDate: row.invoiceDate ? dayjs(row.invoiceDate) : dayjs(),
       notes: row.notes || '',
       items: (row.items || []).map((it) => ({
-        serviceId: it.serviceId || it.service?._id || '',
-        serviceName: it.serviceName || it.service?.name || '',
-        unitPrice: it.unitPrice || 0,
-        qty: it.qty || 1,
+        serviceId: it.serviceId || it.service?._id || it.service || '',
+        serialNo: it.serialNo || it.inventory?.serialNo || it.inventory?.serialNumber || it.inventory?.serial || '',
+        productName:
+          it.itemName ||
+          it.productName ||
+          it.inventory?.product?.name ||
+          it.inventory?.productName?.name ||
+          it.inventory?.productName ||
+          it.product?.name ||
+          '',
+        serviceName: it.serviceName || it.service?.name || it.serviceTitle || '',
+        unitPrice: Number(it.unitPrice ?? it.price ?? it.srp ?? 0),
+        qty: Number(it.qty ?? it.quantity ?? 1),
       })),
       discountType: row.discountType || 'fixed',
       discountAmount: row.discountAmount || 0,
@@ -263,21 +302,19 @@ export default function ServiceInvoicesPage() {
 
   const addServiceToCart = (svc) => {
     const id = svc._id || svc.id;
-    setFormData((p) => {
-      if (p.items.find((it) => it.serviceId === id)) return p;
-      return {
-        ...p,
-        items: [
-          ...p.items,
-          {
-            serviceId: id,
-            serviceName: svc.name || 'Unknown',
-            unitPrice: svc.price || svc.srp || 0,
-            qty: 1,
-          },
-        ],
-      };
-    });
+    setFormData((p) => ({
+      ...p,
+      items: [
+        ...p.items,
+        {
+          serviceId: id,
+          serialNo: '',
+          productName: svc.name || 'Unknown',
+          unitPrice: svc.price || svc.srp || 0,
+          qty: 1,
+        },
+      ],
+    }));
   };
 
   const updateItem = (idx, field, value) => {
@@ -305,25 +342,35 @@ export default function ServiceInvoicesPage() {
     formData.vatType === 'exclusive' ? afterDiscount : afterDiscount + vatAmount;
 
 const handleFormSubmit = async () => {
-    if (!formData.customerId) { enqueueSnackbar('Customer is required', { variant: 'warning' }); return; }
-    if (formData.items.length === 0) { enqueueSnackbar('Add at least one service', { variant: 'warning' }); return; }
-    
+    const trimmedName = String(formData.customerName || '').trim();
+    const trimmedEmail = String(formData.customerEmail || '').trim();
+    const trimmedContact = String(formData.customerContact || '').trim();
+    const trimmedAddress = String(formData.customerAddress || '').trim();
+
+    if (!trimmedName) { enqueueSnackbar('Customer name is required', { variant: 'warning' }); return; }
+    if (!trimmedEmail) { enqueueSnackbar('Customer email is required', { variant: 'warning' }); return; }
+    if (!trimmedContact) { enqueueSnackbar('Customer contact is required', { variant: 'warning' }); return; }
+    if (!trimmedAddress) { enqueueSnackbar('Customer address is required', { variant: 'warning' }); return; }
+    if (formData.items.length === 0) { enqueueSnackbar('Add at least one item', { variant: 'warning' }); return; }
+
     setFormLoading(true);
     try {
-      // Normalize payment status to lowercase
       const normalizedStatus = formData.paymentStatus.toLowerCase();
-      
-      // Map items to backend schema: serviceId -> service, qty -> quantity, unitPrice -> price
       const mappedItems = formData.items.map(item => ({
         service: item.serviceId,
-        itemName: item.serviceName,
-        quantity: item.qty || 1,
-        price: item.unitPrice || 0,
-        subtotal: (item.unitPrice || 0) * (item.qty || 1),
+        serialNo: item.serialNo || '',
+        itemName: item.productName || '',
+        serviceName: item.serviceName || '',
+        quantity: Number(item.qty) || 1,
+        price: Number(item.unitPrice) || 0,
+        subtotal: (Number(item.unitPrice) || 0) * (Number(item.qty) || 1),
       }));
 
       const payload = {
-        customerId: formData.customerId,
+        customerName: trimmedName,
+        customerEmail: trimmedEmail,
+        customerContact: trimmedContact,
+        customerAddress: trimmedAddress,
         employeeId: formData.employeeId,
         installerId: formData.installerId,
         storeBranchId: formData.storeBranchId,
@@ -363,17 +410,22 @@ const handleFormSubmit = async () => {
         // Normalize payment status to lowercase
         const normalizedStatus = formData.paymentStatus.toLowerCase();
         
-        // Map items to backend schema: serviceId -> service, qty -> quantity, unitPrice -> price
+        // Map items to backend schema
         const mappedItems = formData.items.map(item => ({
           service: item.serviceId,
-          itemName: item.serviceName,
-          quantity: item.qty || 1,
-          price: item.unitPrice || 0,
-          subtotal: (item.unitPrice || 0) * (item.qty || 1),
+          serialNo: item.serialNo || '',
+          itemName: item.productName || '',
+          serviceName: item.serviceName || '',
+          quantity: Number(item.qty) || 1,
+          price: Number(item.unitPrice) || 0,
+          subtotal: (Number(item.unitPrice) || 0) * (Number(item.qty) || 1),
         }));
 
         const payload = {
-          customerId: formData.customerId,
+          customerName: String(formData.customerName || '').trim(),
+          customerEmail: String(formData.customerEmail || '').trim(),
+          customerContact: String(formData.customerContact || '').trim(),
+          customerAddress: String(formData.customerAddress || '').trim(),
           employeeId: formData.employeeId,
           installerId: formData.installerId,
           storeBranchId: formData.storeBranchId,
@@ -659,15 +711,13 @@ const handleFormSubmit = async () => {
         >
           <Grid container spacing={2} mt={0.5}>
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Customer</InputLabel>
-                <Select value={formData.customerId} label="Customer" onChange={setF('customerId')}>
-                  <MenuItem value=""><em>None</em></MenuItem>
-                  {customers.map((c) => (
-                    <MenuItem key={c._id || c.id} value={c._id || c.id}>{c.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <TextField
+                label="Customer Name"
+                fullWidth
+                size="small"
+                value={formData.customerName}
+                onChange={setF('customerName')}
+              />
             </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                       <FormControl fullWidth size="small">
@@ -688,7 +738,7 @@ const handleFormSubmit = async () => {
                         <InputLabel>Installer</InputLabel>
                         <Select value={formData.installerId} label="Installer" onChange={setF('installerId')}>
                           <MenuItem value=""><em>None</em></MenuItem>
-                          {employees.map((e) => {
+                          {installers.map((e) => {
                             const name = String(e?.name || e?.firstName || '—');
                             const position = e?.position || '';
                             const display = position ? `${name} (${position})` : name;
@@ -717,6 +767,38 @@ const handleFormSubmit = async () => {
               />
             </Grid>
             <Grid item xs={12}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    label="Customer Email"
+                    fullWidth
+                    size="small"
+                    value={formData.customerEmail}
+                    onChange={setF('customerEmail')}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <TextField
+                    label="Customer Contact"
+                    fullWidth
+                    size="small"
+                    value={formData.customerContact}
+                    onChange={setF('customerContact')}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={12} md={6}>
+                  <TextField
+                    label="Customer Address"
+                    fullWidth
+                    size="small"
+                    value={formData.customerAddress}
+                    onChange={setF('customerAddress')}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid item xs={12}>
               <TextField
                 label="Notes"
                 fullWidth
@@ -729,16 +811,28 @@ const handleFormSubmit = async () => {
             <Grid item xs={12}>
               <Divider sx={{ my: 1 }} />
               <Typography variant="subtitle2" fontWeight={600} mb={1}>Add Services</Typography>
-              <TextField
-                size="small"
-                placeholder="Search services…"
-                value={serviceSearch}
-                onChange={(e) => setServiceSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-                }}
-                sx={{ mb: 1, minWidth: 260 }}
-              />
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1 }}>
+                <TextField
+                  size="small"
+                  placeholder="Search services…"
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                  }}
+                  sx={{ minWidth: 260 }}
+                />
+                <TextField
+                  size="small"
+                  placeholder="Search product models…"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                  }}
+                  sx={{ minWidth: 260 }}
+                />
+              </Stack>
               <Box sx={{ maxHeight: 140, overflowY: 'auto', mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
                 {services.map((svc) => (
                   <Box
@@ -757,8 +851,10 @@ const handleFormSubmit = async () => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Service Name</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Unit Price</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Serial No</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Product Name</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>SRP</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Qty</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
                       <TableCell />
@@ -767,18 +863,80 @@ const handleFormSubmit = async () => {
                   <TableBody>
                     {formData.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
+                        <TableCell colSpan={7} align="center" sx={{ py: 2 }}>
                           <Typography variant="body2" color="text.secondary">No services added</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
                       formData.items.map((it, idx) => (
                         <TableRow key={idx}>
-                          <TableCell>{it.serviceName}</TableCell>
+                          <TableCell>
+                            <TextField
+                              size="small"
+                              value={it.serialNo || ''}
+                              onChange={(e) => updateItem(idx, 'serialNo', e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Stack spacing={0.75}>
+                              <TextField
+                                size="small"
+                                value={it.productName || ''}
+                                onChange={(e) => updateItem(idx, 'productName', e.target.value)}
+                                placeholder="Manual product name"
+                              />
+                              <FormControl size="small" fullWidth>
+                                <Select
+                                  value=""
+                                  displayEmpty
+                                  onChange={(e) => {
+                                    const selected = products.find((p) => String(p._id || p.id) === String(e.target.value));
+                                    if (selected) {
+                                      const selectedName =
+                                        selected.name ||
+                                        selected.productName?.name ||
+                                        selected.productName ||
+                                        '';
+                                      updateItem(idx, 'productName', String(selectedName));
+                                    }
+                                  }}
+                                >
+                                  <MenuItem value=""><em>Select from product models</em></MenuItem>
+                                  {products.map((p) => {
+                                    const pid = p._id || p.id;
+                                    const pname = p.name || p.productName?.name || p.productName || 'Unnamed Product';
+                                    return <MenuItem key={pid} value={pid}>{String(pname)}</MenuItem>;
+                                  })}
+                                </Select>
+                              </FormControl>
+                            </Stack>
+                          </TableCell>
+                          <TableCell>
+                            <FormControl size="small" fullWidth sx={{ minWidth: 160 }}>
+                              <Select
+                                value={it.serviceId || ''}
+                                displayEmpty
+                                onChange={(e) => {
+                                  const selected = services.find((svc) => String(svc._id || svc.id) === String(e.target.value));
+                                  updateItem(idx, 'serviceId', e.target.value);
+                                  if (selected) {
+                                    updateItem(idx, 'serviceName', String(selected.name || ''));
+                                    updateItem(idx, 'unitPrice', Number(selected.price || selected.srp || 0));
+                                  }
+                                }}
+                              >
+                                <MenuItem value=""><em>Select service</em></MenuItem>
+                                {services.map((svc) => {
+                                  const sid = svc._id || svc.id;
+                                  return <MenuItem key={sid} value={sid}>{String(svc.name || 'Service')}</MenuItem>;
+                                })}
+                              </Select>
+                            </FormControl>
+                          </TableCell>
                           <TableCell>
                             <TextField size="small" type="number" value={it.unitPrice}
                               onChange={(e) => updateItem(idx, 'unitPrice', Number(e.target.value))}
-                              inputProps={{ min: 0, style: { width: 80 } }} />
+                              inputProps={{ min: 0, style: { width: 90 } }} />
                           </TableCell>
                           <TableCell>
                             <TextField size="small" type="number" value={it.qty}

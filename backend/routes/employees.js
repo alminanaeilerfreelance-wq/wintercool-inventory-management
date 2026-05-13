@@ -12,7 +12,10 @@ router.get('/', protect, async (req, res) => {
           $or: [
             { firstName: { $regex: search, $options: 'i' } },
             { lastName: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } },
             { employeeId: { $regex: search, $options: 'i' } },
+            { position: { $regex: search, $options: 'i' } },
+            { department: { $regex: search, $options: 'i' } },
           ],
         }
       : {};
@@ -113,6 +116,16 @@ router.put('/:id', protect, async (req, res) => {
     const updatePayload = { ...req.body };
     if (Object.prototype.hasOwnProperty.call(req.body, 'storeBranch')) {
       updatePayload.storeBranch = req.body.storeBranch || undefined;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'employeeId') && req.body.employeeId) {
+      const duplicate = await Employee.findOne({
+        employeeId: req.body.employeeId,
+        _id: { $ne: req.params.id },
+      });
+      if (duplicate) {
+        return res.status(400).json({ message: 'Employee ID already exists' });
+      }
     }
 
     const item = await Employee.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true })
