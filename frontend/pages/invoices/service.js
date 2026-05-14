@@ -357,10 +357,13 @@ const handleFormSubmit = async () => {
     try {
       const normalizedStatus = formData.paymentStatus.toLowerCase();
       const mappedItems = formData.items.map(item => ({
-        service: item.serviceId,
+        service: item.serviceId || undefined,
         serialNo: item.serialNo || '',
         itemName: item.productName || '',
-        serviceName: item.serviceName || '',
+        serviceName:
+          item.serviceName ||
+          services.find((svc) => String(svc._id || svc.id) === String(item.serviceId))?.name ||
+          '',
         quantity: Number(item.qty) || 1,
         price: Number(item.unitPrice) || 0,
         subtotal: (Number(item.unitPrice) || 0) * (Number(item.qty) || 1),
@@ -412,10 +415,13 @@ const handleFormSubmit = async () => {
         
         // Map items to backend schema
         const mappedItems = formData.items.map(item => ({
-          service: item.serviceId,
+          service: item.serviceId || undefined,
           serialNo: item.serialNo || '',
           itemName: item.productName || '',
-          serviceName: item.serviceName || '',
+          serviceName:
+            item.serviceName ||
+            services.find((svc) => String(svc._id || svc.id) === String(item.serviceId))?.name ||
+            '',
           quantity: Number(item.qty) || 1,
           price: Number(item.unitPrice) || 0,
           subtotal: (Number(item.unitPrice) || 0) * (Number(item.qty) || 1),
@@ -547,7 +553,7 @@ const handleFormSubmit = async () => {
           <Select
             size="small"
             value={status}
-            onChange={(e) => handleStatusChange(row._id || row.id, e.target.value.toLowerCase())}
+            onChange={(e) => handleStatusChange(row._id || row.id, e.target.value)}
             variant="standard"
             disableUnderline
             renderValue={(v) => (

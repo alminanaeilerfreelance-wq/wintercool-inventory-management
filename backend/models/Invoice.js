@@ -14,6 +14,14 @@ const invoiceItemSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    serialNo: {
+      type: String,
+      trim: true,
+    },
+    serviceName: {
+      type: String,
+      trim: true,
+    },
     quantity: {
       type: Number,
     },

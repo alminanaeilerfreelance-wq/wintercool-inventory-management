@@ -75,6 +75,8 @@ const sanitizeInvoiceItems = (items = []) =>
         inventory: item.inventory || undefined,
         service: item.service || undefined,
         itemName: item.itemName || '',
+        serialNo: item.serialNo || '',
+        serviceName: item.serviceName || '',
         quantity,
         price,
         subtotal,
