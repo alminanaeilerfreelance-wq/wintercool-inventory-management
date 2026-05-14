@@ -300,17 +300,25 @@ export default function ServiceInvoicesPage() {
 
   const setF = (k) => (e) => setFormData((p) => ({ ...p, [k]: e.target.value }));
 
-  const addServiceToCart = (svc) => {
-    const id = svc._id || svc.id;
+  const addProductModelToCart = (prod) => {
+    const productName =
+      prod?.name ||
+      prod?.productName?.name ||
+      prod?.productName ||
+      'Unknown Product';
+
+    const srp = Number(prod?.price ?? prod?.srp ?? prod?.unitPrice ?? 0);
+
     setFormData((p) => ({
       ...p,
       items: [
         ...p.items,
         {
-          serviceId: id,
+          serviceId: '',
+          serviceName: '',
           serialNo: '',
-          productName: svc.name || 'Unknown',
-          unitPrice: svc.price || svc.srp || 0,
+          productName,
+          unitPrice: srp,
           qty: 1,
         },
       ],
@@ -816,18 +824,8 @@ const handleFormSubmit = async () => {
 
             <Grid item xs={12}>
               <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle2" fontWeight={600} mb={1}>Add Services</Typography>
+              <Typography variant="subtitle2" fontWeight={600} mb={1}>Add Product Models</Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1 }}>
-                <TextField
-                  size="small"
-                  placeholder="Search services…"
-                  value={serviceSearch}
-                  onChange={(e) => setServiceSearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-                  }}
-                  sx={{ minWidth: 260 }}
-                />
                 <TextField
                   size="small"
                   placeholder="Search product models…"
@@ -840,17 +838,23 @@ const handleFormSubmit = async () => {
                 />
               </Stack>
               <Box sx={{ maxHeight: 140, overflowY: 'auto', mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
-                {services.map((svc) => (
-                  <Box
-                    key={svc._id || svc.id}
-                    sx={{ p: 0.75, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, borderRadius: 0.5 }}
-                    onClick={() => addServiceToCart(svc)}
-                  >
-                    <Typography variant="body2">
-                      {svc.name} — Price: {fmt(svc.price || svc.srp || 0)}
-                    </Typography>
-                  </Box>
-                ))}
+                {products.map((prod) => {
+                  const pid = prod._id || prod.id;
+                  const pname = prod.name || prod.productName?.name || prod.productName || 'Unnamed Product';
+                  const psrp = Number(prod.price ?? prod.srp ?? prod.unitPrice ?? 0);
+
+                  return (
+                    <Box
+                      key={pid}
+                      sx={{ p: 0.75, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, borderRadius: 0.5 }}
+                      onClick={() => addProductModelToCart(prod)}
+                    >
+                      <Typography variant="body2">
+                        {String(pname)} — SRP: {fmt(psrp)}
+                      </Typography>
+                    </Box>
+                  );
+                })}
               </Box>
 
               <TableContainer component={Paper} variant="outlined">

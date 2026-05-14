@@ -6,7 +6,8 @@
 - [x] Filter installer dropdown by installer/ducter/engineer-like roles
 - [x] Rework items table to: Serial No, Barcode, Product Name, SRP, Qty
 - [x] Update payload mapping with manual customer + item fields
-- [ ] Add product-model search/select support for Product Name in service items
+- [x] Add product-model search/select support for Product Name in service items
+- [x] Replace "Add Services" picker list to use product models data
 - [ ] Update items table columns to: Serial No, Product Name, Service, SRP, Qty, Total
 - [ ] Remove barcode usage from service item UI/payload
 - [ ] Update backend invoice item schema to persist serialNo and serviceName
