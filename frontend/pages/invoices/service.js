@@ -888,38 +888,13 @@ const handleFormSubmit = async () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Stack spacing={0.75}>
-                              <TextField
-                                size="small"
-                                value={it.productName || ''}
-                                onChange={(e) => updateItem(idx, 'productName', e.target.value)}
-                                placeholder="Manual product name"
-                              />
-                              <FormControl size="small" fullWidth>
-                                <Select
-                                  value=""
-                                  displayEmpty
-                                  onChange={(e) => {
-                                    const selected = products.find((p) => String(p._id || p.id) === String(e.target.value));
-                                    if (selected) {
-                                      const selectedName =
-                                        selected.name ||
-                                        selected.productName?.name ||
-                                        selected.productName ||
-                                        '';
-                                      updateItem(idx, 'productName', String(selectedName));
-                                    }
-                                  }}
-                                >
-                                  <MenuItem value=""><em>Select from product models</em></MenuItem>
-                                  {products.map((p) => {
-                                    const pid = p._id || p.id;
-                                    const pname = p.name || p.productName?.name || p.productName || 'Unnamed Product';
-                                    return <MenuItem key={pid} value={pid}>{String(pname)}</MenuItem>;
-                                  })}
-                                </Select>
-                              </FormControl>
-                            </Stack>
+                            <TextField
+                              size="small"
+                              value={it.productName || ''}
+                              onChange={(e) => updateItem(idx, 'productName', e.target.value)}
+                              placeholder="Product name"
+                              fullWidth
+                            />
                           </TableCell>
                           <TableCell>
                             <FormControl size="small" fullWidth sx={{ minWidth: 160 }}>
