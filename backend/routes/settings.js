@@ -45,10 +45,21 @@ router.put('/company', protect, adminOnly, async (req, res) => {
   try {
     const CompanyModel = Company || require('../models/Company');
 
+    const body = req.body || {};
+    const payload = {
+      name: body.name ?? '',
+      logo: body.logo ?? '',
+      slogan: body.slogan ?? '',
+      contactNumber: body.contactNumber ?? body.contact ?? body.phone ?? '',
+      address: body.address ?? '',
+      tinNo: body.tinNo ?? body.tin ?? '',
+      licenseNo: body.licenseNo ?? body.license ?? '',
+    };
+
     const updated = await CompanyModel.findOneAndUpdate(
       {},
-      { $set: req.body },
-      { new: true, upsert: true, runValidators: true }
+      { $set: payload },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
 
     return res.status(200).json({
@@ -57,6 +68,9 @@ router.put('/company', protect, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Update company error:', error);
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     return res.status(500).json({ message: 'Server error updating company information' });
   }
 });

@@ -73,7 +73,7 @@ const NAV_ITEMS_BASE = [
     children: [
       { label: 'Customer Invoices', href: '/invoices/customer' },
       { label: 'Service Invoices', href: '/invoices/service' },
-      { label: 'Sub-Dealer Invoices', href: '/invoices/sub-dealers' },
+      // { label: 'Sub-Dealer Invoices', href: '/invoices/sub-dealers' },
       { label: 'Purchase Orders', href: '/invoices/purchase-orders', icon: <ShoppingCartIcon /> },
       { label: 'Return Orders', href: '/invoices/return-orders' },
     ],

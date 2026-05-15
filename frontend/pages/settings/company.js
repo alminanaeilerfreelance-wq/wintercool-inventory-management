@@ -37,7 +37,6 @@ export default function CompanySettingsPage() {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [logoPreview, setLogoPreview] = useState('');
-  const [logoFile, setLogoFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -73,9 +72,12 @@ export default function CompanySettingsPage() {
       enqueueSnackbar('Logo must be under 10MB', { variant: 'warning' });
       return;
     }
-    setLogoFile(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.onload = (ev) => {
+      const value = ev.target?.result || '';
+      setLogoPreview(value);
+      setForm((p) => ({ ...p, logo: value }));
+    };
     reader.readAsDataURL(file);
   };
 
@@ -87,15 +89,16 @@ export default function CompanySettingsPage() {
   const handleAdminConfirm = async () => {
     setLoading(true);
     try {
-      let payload;
-      if (logoFile) {
-        const fd = new FormData();
-        Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-        fd.append('logo', logoFile);
-        payload = fd;
-      } else {
-        payload = form;
-      }
+      const payload = {
+        name: form.name,
+        slogan: form.slogan,
+        contactNumber: form.contactNumber,
+        address: form.address,
+        tinNo: form.tinNo,
+        licenseNo: form.licenseNo,
+        logo: form.logo || logoPreview || '',
+      };
+
       await updateCompany(payload);
       enqueueSnackbar('Company settings saved', { variant: 'success' });
     } catch (err) {
