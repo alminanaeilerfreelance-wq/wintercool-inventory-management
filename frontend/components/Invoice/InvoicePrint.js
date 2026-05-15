@@ -206,8 +206,8 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
         <TableHead>
           <TableRow sx={{ bgcolor: 'primary.main' }}>
             <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Serial No</TableCell>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Barcode</TableCell>
             <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Product Name</TableCell>
-            <TableCell sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Service</TableCell>
             <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>SRP</TableCell>
             <TableCell align="center" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Qty</TableCell>
             <TableCell align="right" sx={{ fontWeight: 700, fontSize: 11, color: '#fff' }}>Total</TableCell>
@@ -221,6 +221,7 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
           ) : (
             items.map((item, idx) => {
               const serialNo = item.serialNo || item.inventory?.serialNo || item.inventory?.serialNumber || item.inventory?.serial || '—';
+              const barcode = item.barcode || item.inventory?.barcode || item.inventory?.barCode || '—';
               const productName =
                 item.itemName ||
                 item.productName ||
@@ -229,11 +230,6 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
                 item.inventory?.productName ||
                 item.product?.name ||
                 '—';
-              const serviceName =
-                item.serviceName ||
-                item.service?.name ||
-                item.serviceTitle ||
-                '—';
               const srp = Number(item.price || item.unitPrice || item.srp || 0);
               const qty = Number(item.quantity || item.qty || 1);
               const lineTotal = srp * qty;
@@ -241,8 +237,8 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
               return (
                 <TableRow key={idx} sx={{ '&:nth-of-type(even)': { bgcolor: 'grey.50' } }}>
                   <TableCell sx={{ fontSize: 11 }}>{String(serialNo)}</TableCell>
+                  <TableCell sx={{ fontSize: 11 }}>{String(barcode)}</TableCell>
                   <TableCell sx={{ fontSize: 11 }}>{String(productName)}</TableCell>
-                  <TableCell sx={{ fontSize: 11 }}>{String(serviceName)}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 11 }}>{fmt(srp)}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 11 }}>{qty}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 11 }}>{fmt(lineTotal)}</TableCell>

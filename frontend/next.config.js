@@ -1,13 +1,15 @@
 /** @type {import('next').NextConfig} */
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://wintercool-k2o8.onrender.com/api'
+    : 'http://localhost:5000/api');
+
 const nextConfig = {
   output: 'standalone',
   env: {
     // Local dev default (backend runs on :5000). Production can override via env.
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL ||
-      (process.env.NODE_ENV === 'production'
-        ? 'https://wintercool-k2o8.onrender.com/api'
-        : 'http://localhost:5000/api'),
+    NEXT_PUBLIC_API_URL: API_URL,
   },
   images: {
     remotePatterns: [
@@ -25,7 +27,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+        destination: `${API_URL}/:path*`,
       },
     ];
   },
