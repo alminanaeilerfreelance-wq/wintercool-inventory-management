@@ -124,3 +124,8 @@ npm run dev
 
 **Last Updated:** April 25, 2026
 **System Status:** ✅ FULLY OPERATIONAL
+
+
+git branch -M main              
+git remote add origin https://github.com/alminanaeilerfreelance-wq/scoreboard.git
+git push -u origin main      
