@@ -30,7 +30,7 @@ import {
 const DRAWER_WIDTH = 264;
 
 const NAV_ITEMS_BASE = [
-//   { label: 'Messages', href: '/messages', icon: <AssessmentIcon /> },
+  // { label: 'Messages', href: '/messages', icon: <AssessmentIcon /> },
   { label: 'Dashboard', icon: <DashboardIcon />, href: '/dashboard' },
   {
     group: 'Data Management',
@@ -172,12 +172,21 @@ export default function MainLayoutShim({ children }) {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : 'User';
 
+
+  const baseNavItems =
+    user?.role === 'user'
+      ? NAV_ITEMS_BASE.filter((item) => item.label !== 'Dashboard' && item.label !== 'Settings')
+      : NAV_ITEMS_BASE;
+
   const navItems = [
-    ...NAV_ITEMS_BASE,
+    ...baseNavItems,
     ...(user?.role === 'admin' || user?.role === 'superadmin'
       ? [{ group: 'System', label: 'Audit Log', icon: <AssessmentIcon />, href: '/audit-log' }]
       : []),
   ];
+
+
+
 
   const pageTitle = usePageTitle(navItems, router.pathname);
 
@@ -186,7 +195,7 @@ export default function MainLayoutShim({ children }) {
       pageTitle={pageTitle}
       company={company}
       user={user}
-      roleLabel={roleLabel}
+      roleLabel={roleLabel}f
       unreadCount={unreadCount}
       messages={messages}
       navItems={navItems}

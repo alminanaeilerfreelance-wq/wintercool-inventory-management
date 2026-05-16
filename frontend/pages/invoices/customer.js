@@ -28,6 +28,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/router';
 import { useSnackbar } from 'notistack';
 import { useReactToPrint } from 'react-to-print';
 
@@ -137,6 +138,7 @@ const EMPTY_FORM = {
 };
 
 export default function CustomerInvoicesPage() {
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const { company } = useSettings();
 
@@ -233,6 +235,48 @@ const fetchLookups = useCallback(async () => {
   useEffect(() => { fetchLookups(); }, [fetchLookups]);
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { if (formOpen) fetchInventory(); }, [formOpen, fetchInventory]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const editId = router.query?.editId;
+    if (!editId || rows.length === 0) return;
+
+    const targetId = String(Array.isArray(editId) ? editId[0] : editId);
+    const targetRow = rows.find((r) => String(r._id || r.id) === targetId);
+    if (!targetRow) return;
+
+    openEdit(targetRow);
+
+    const nextQuery = { ...router.query };
+    delete nextQuery.editId;
+    router.replace(
+      { pathname: router.pathname, query: nextQuery },
+      undefined,
+      { shallow: true }
+    );
+  }, [router, rows]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const viewId = router.query?.viewId;
+    if (!viewId || rows.length === 0) return;
+
+    const targetId = String(Array.isArray(viewId) ? viewId[0] : viewId);
+    const targetRow = rows.find((r) => String(r._id || r.id) === targetId);
+    if (!targetRow) return;
+
+    handleViewInvoice(targetRow);
+
+    const nextQuery = { ...router.query };
+    delete nextQuery.viewId;
+    router.replace(
+      { pathname: router.pathname, query: nextQuery },
+      undefined,
+      { shallow: true }
+    );
+  }, [router, rows]);
 
   const openAdd = () => { setFormData(EMPTY_FORM); setEditId(null); setFormOpen(true); };
 const openEdit = (row) => {
@@ -461,9 +505,10 @@ const openEdit = (row) => {
     }},
     { field: 'installer', headerName: 'Installer', renderCell: ({ row }) => {
       const i = row.installer;
-      const name = String((typeof i === 'string' ? i : i?.name) || row.installerName || '—');
+      const hasInstallerAssigned = Boolean(i || row.installerName);
+      const name = String((typeof i === 'string' ? i : i?.name) || row.installerName || 'n/a');
       const position = i?.position || '';
-      const contact = i?.contact || '';
+      const contact = i?.contact || (hasInstallerAssigned ? '' : '0000');
       if (position || contact) {
         return (
           <Box>
@@ -550,6 +595,57 @@ const openEdit = (row) => {
   ];
   const nameOf = (arr, id) => arr.find((x) => (x._id || x.id) === id)?.name || '—';
 
+  const filteredRows = React.useMemo(() => {
+    const term = String(search || '').trim().toLowerCase();
+    if (!term) return rows;
+
+    return rows.filter((row) => {
+      const invoiceNo = String(row.invoiceNo || row.invoice_no || '').toLowerCase();
+
+      const customer = String(
+        (typeof row.customer === 'string' ? row.customer : row.customer?.name) || row.customerName || ''
+      ).toLowerCase();
+
+      const employee = String(
+        (typeof row.employee === 'string' ? row.employee : row.employee?.name) || row.employeeName || ''
+      ).toLowerCase();
+
+      const installer = String(
+        (typeof row.installer === 'string' ? row.installer : row.installer?.name) || row.installerName || ''
+      ).toLowerCase();
+
+      const branch = String(
+        (typeof row.storeBranch === 'string' ? row.storeBranch : row.storeBranch?.name) || row.branchName || ''
+      ).toLowerCase();
+
+      const subtotalValue = Number(row.subtotal || 0);
+      const totalValue = Number(row.total || 0);
+      const vatValue = Number(row.vatAmount || 0);
+
+      const subtotal = fmt(subtotalValue).toLowerCase();
+      const totalAmount = fmt(totalValue).toLowerCase();
+      const vat = fmt(vatValue).toLowerCase();
+
+      const status = normalizeStatus(row.paymentStatus || row.status).toLowerCase();
+
+      const dateRaw = row.invoiceDate || row.invoice_date || row.createdAt;
+      const date = dateRaw ? dayjs(dateRaw).format('MMM DD, YYYY').toLowerCase() : '';
+
+      return [
+        invoiceNo,
+        customer,
+        employee,
+        installer,
+        branch,
+        subtotal,
+        totalAmount,
+        vat,
+        status,
+        date,
+      ].some((value) => value.includes(term));
+    });
+  }, [rows, search]);
+
   const invoiceStats = React.useMemo(() => ({
     total: total,
     paid: rows.filter(r => ['Paid','paid'].includes(r.paymentStatus || r.status)).length,
@@ -611,7 +707,7 @@ const openEdit = (row) => {
 
         <DataTable
           columns={columns}
-          rows={rows}
+          rows={filteredRows}
           loading={loading}
           page={page}
           rowsPerPage={rowsPerPage}

@@ -8,12 +8,19 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Badge from '@mui/material/Badge';
 import IconButton from '@mui/material/IconButton';
@@ -35,6 +42,8 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import MessageIcon from '@mui/icons-material/Message';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
 import Link from 'next/link';
 
 import {
@@ -48,7 +57,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   Area,
@@ -133,6 +142,21 @@ export default function DashboardPage() {
   const [notifBadge, setNotifBadge] = useState(0);
   const [upcomingCalendarAlerts, setUpcomingCalendarAlerts] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [customerInvoices, setCustomerInvoices] = useState([]);
+  const [customerInvoicesLoading, setCustomerInvoicesLoading] = useState(false);
+  const [customerInvoicesPage, setCustomerInvoicesPage] = useState(0);
+  const [customerInvoicesRowsPerPage, setCustomerInvoicesRowsPerPage] = useState(10);
+  const [customerInvoicesTotal, setCustomerInvoicesTotal] = useState(0);
+  const [installerFilter, setInstallerFilter] = useState('all');
+  const [customerInvoicesSearch, setCustomerInvoicesSearch] = useState('');
+
+  const [serviceInvoices, setServiceInvoices] = useState([]);
+  const [serviceInvoicesLoading, setServiceInvoicesLoading] = useState(false);
+  const [serviceInvoicesPage, setServiceInvoicesPage] = useState(0);
+  const [serviceInvoicesRowsPerPage, setServiceInvoicesRowsPerPage] = useState(10);
+  const [serviceInvoicesTotal, setServiceInvoicesTotal] = useState(0);
+  const [serviceInstallerFilter, setServiceInstallerFilter] = useState('na-only');
+  const [serviceInvoicesSearch, setServiceInvoicesSearch] = useState('');
 
   const handleSocketNotification = useCallback((data) => {
     setNotifBadge((prev) => prev + 1);
@@ -140,6 +164,76 @@ export default function DashboardPage() {
   }, []);
 
   useSocket(user?._id || user?.id, handleSocketNotification);
+
+  const isInstallerNA = (inv) => {
+    const installerObjName = typeof inv.installer === 'object' ? inv.installer?.name : '';
+    const installerDirect = typeof inv.installer === 'string' ? inv.installer : '';
+    const normalizedInstaller = String(inv.installerName || installerObjName || installerDirect || '')
+      .trim()
+      .toLowerCase();
+
+    return (
+      normalizedInstaller.length === 0 ||
+      normalizedInstaller === 'n/a' ||
+      normalizedInstaller === 'na' ||
+      normalizedInstaller === 'none' ||
+      normalizedInstaller === 'null' ||
+      normalizedInstaller === 'undefined' ||
+      normalizedInstaller === '-'
+    );
+  };
+
+  const fetchCustomerInvoices = useCallback(async () => {
+    if (!isAdmin) return;
+    setCustomerInvoicesLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: (customerInvoicesPage + 1).toString(),
+        limit: customerInvoicesRowsPerPage.toString(),
+        invoiceType: 'customer',
+      });
+      const res = await api.get(`/invoices?${params.toString()}`);
+      const d = res.data?.data || res.data;
+      const items = Array.isArray(d) ? d : d?.items || d?.invoices || [];
+      const filteredItems = installerFilter === 'na-only' ? items.filter(isInstallerNA) : items;
+      setCustomerInvoices(filteredItems);
+      setCustomerInvoicesTotal(installerFilter === 'na-only'
+        ? filteredItems.length
+        : (res.data?.total || res.data?.pagination?.total || items.length));
+    } catch (err) {
+      console.error('Customer invoices fetch error:', err);
+      setCustomerInvoices([]);
+      setCustomerInvoicesTotal(0);
+    } finally {
+      setCustomerInvoicesLoading(false);
+    }
+  }, [isAdmin, customerInvoicesPage, customerInvoicesRowsPerPage, installerFilter]);
+
+  const fetchServiceInvoices = useCallback(async () => {
+    if (!isAdmin) return;
+    setServiceInvoicesLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: (serviceInvoicesPage + 1).toString(),
+        limit: serviceInvoicesRowsPerPage.toString(),
+        invoiceType: 'service',
+      });
+      const res = await api.get(`/invoices?${params.toString()}`);
+      const d = res.data?.data || res.data;
+      const items = Array.isArray(d) ? d : d?.items || d?.invoices || [];
+      const filteredItems = serviceInstallerFilter === 'na-only' ? items.filter(isInstallerNA) : items;
+      setServiceInvoices(filteredItems);
+      setServiceInvoicesTotal(serviceInstallerFilter === 'na-only'
+        ? filteredItems.length
+        : (res.data?.total || res.data?.pagination?.total || items.length));
+    } catch (err) {
+      console.error('Service invoices fetch error:', err);
+      setServiceInvoices([]);
+      setServiceInvoicesTotal(0);
+    } finally {
+      setServiceInvoicesLoading(false);
+    }
+  }, [isAdmin, serviceInvoicesPage, serviceInvoicesRowsPerPage, serviceInstallerFilter]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -245,6 +339,30 @@ export default function DashboardPage() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchCustomerInvoices();
+  }, [fetchCustomerInvoices]);
+
+  useEffect(() => {
+    fetchServiceInvoices();
+  }, [fetchServiceInvoices]);
+
+  useEffect(() => {
+    setCustomerInvoicesPage(0);
+  }, [installerFilter]);
+
+  useEffect(() => {
+    setCustomerInvoicesPage(0);
+  }, [customerInvoicesSearch]);
+
+  useEffect(() => {
+    setServiceInvoicesPage(0);
+  }, [serviceInstallerFilter]);
+
+  useEffect(() => {
+    setServiceInvoicesPage(0);
+  }, [serviceInvoicesSearch]);
 
   if (loading) {
     return (
@@ -1125,6 +1243,364 @@ export default function DashboardPage() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* ── Admin Customer Invoices Table ── */}
+      {isAdmin && (
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            mb: 4,
+          }}
+        >
+          <CardHeader
+            title={
+              <Typography variant="h6" fontWeight={700} color="text.primary">
+                Customer Invoices
+              </Typography>
+            }
+            subheader={
+              <Typography variant="body2" color="text.secondary">
+                All customer invoices with pagination
+              </Typography>
+            }
+            action={
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ minWidth: { xs: 220, sm: 420 } }}>
+                <TextField
+                  size="small"
+                  placeholder="Search invoice no, customer, employee, installer..."
+                  value={customerInvoicesSearch}
+                  onChange={(e) => setCustomerInvoicesSearch(e.target.value)}
+                  sx={{ minWidth: { xs: 220, sm: 260 } }}
+                />
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel id="installer-filter-label">Installer</InputLabel>
+                  <Select
+                    labelId="installer-filter-label"
+                    value={installerFilter}
+                    label="Installer"
+                    onChange={(e) => setInstallerFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="na-only">N/A only</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+            }
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Invoice No</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Customer Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Employee</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Installer</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Store Branch</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="right">Total</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Payment Status</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Invoice Date</TableCell>
+
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {customerInvoicesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={15} align="center" sx={{ py: 3 }}>
+                        <CircularProgress size={22} />
+                      </TableCell>
+                    </TableRow>
+                  ) : customerInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={15} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No customer invoices found</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    customerInvoices
+                      .filter((inv) => {
+                        const q = customerInvoicesSearch.trim().toLowerCase();
+                        if (!q) return true;
+
+                        const invoiceNo = String(inv.invoiceNo || inv.invoice_no || inv.invoiceNumber || '').toLowerCase();
+                        const customerName = String(inv.customerName || inv.customer?.name || '').toLowerCase();
+                        const employeeName = String(inv.employeeName || inv.employee?.name || '').toLowerCase();
+                        const installerName = String(inv.installerName || inv.installer?.name || '').toLowerCase();
+                        const storeBranch = String(inv.storeBranch?.name || inv.storeBranchName || inv.branchName || '').toLowerCase();
+                        const totalRaw = Number(inv.total || inv.totalAmount || 0);
+                        const totalFormatted = fmtCurrency(totalRaw).toLowerCase();
+                        const totalWithPeso = `₱${fmtCurrency(totalRaw)}`.toLowerCase();
+                        const paymentStatus = String(inv.paymentStatus || inv.status || '').toLowerCase();
+                        const invoiceDateFormatted = inv.invoiceDate ? dayjs(inv.invoiceDate).format('MMM DD, YYYY').toLowerCase() : '';
+                        const invoiceDateRaw = inv.invoiceDate ? String(inv.invoiceDate).toLowerCase() : '';
+
+                        return (
+                          invoiceNo.includes(q) ||
+                          customerName.includes(q) ||
+                          employeeName.includes(q) ||
+                          installerName.includes(q) ||
+                          storeBranch.includes(q) ||
+                          String(totalRaw).includes(q) ||
+                          totalFormatted.includes(q) ||
+                          totalWithPeso.includes(q) ||
+                          paymentStatus.includes(q) ||
+                          invoiceDateFormatted.includes(q) ||
+                          invoiceDateRaw.includes(q)
+                        );
+                      })
+                      .map((inv, idx) => {
+                      const statusRaw = inv.paymentStatus || inv.status || 'pending';
+                      const statusLabel = String(statusRaw);
+                      const statusKey = statusLabel.toLowerCase();
+                      return (
+                        <TableRow key={inv._id || inv.id || idx} hover>
+                          <TableCell>{inv.invoiceNo || inv.invoice_no || inv.invoiceNumber || '—'}</TableCell>
+                          <TableCell>{inv.customerName || inv.customer?.name || '—'}</TableCell>
+                          <TableCell>{inv.employeeName || inv.employee?.name || '—'}</TableCell>
+                          <TableCell>{inv.installerName || inv.installer?.name || 'n/a'}</TableCell>
+                          <TableCell>{inv.storeBranch?.name || inv.storeBranchName || inv.branchName || '—'}</TableCell>
+                          <TableCell align="right">₱{fmtCurrency(Number(inv.total || inv.totalAmount || 0))}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={statusLabel}
+                              size="small"
+                              color={STATUS_COLORS[statusKey] || 'default'}
+                              sx={{ textTransform: 'capitalize', fontSize: '0.75rem', height: 24 }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {inv.invoiceDate ? dayjs(inv.invoiceDate).format('MMM DD, YYYY') : '—'}
+                          </TableCell>
+                        
+                          <TableCell align="center">
+                            <Stack direction="row" spacing={0.5} justifyContent="center">
+                              <Tooltip title="View">
+                                <IconButton
+                                  size="small"
+                                  color="info"
+                                  component={Link}
+                                  href={`/invoices/customer?viewId=${inv._id || inv.id}`}
+                                >
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit">
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  component={Link}
+                                  href={`/invoices/customer?editId=${inv._id || inv.id}`}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={customerInvoicesTotal}
+              page={customerInvoicesPage}
+              onPageChange={(_, newPage) => setCustomerInvoicesPage(newPage)}
+              rowsPerPage={customerInvoicesRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setCustomerInvoicesRowsPerPage(parseInt(e.target.value, 10));
+                setCustomerInvoicesPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Admin Service Invoices Table (N/A Match Focus) ── */}
+      {isAdmin && (
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            mb: 4,
+          }}
+        >
+          <CardHeader
+            title={
+              <Typography variant="h6" fontWeight={700} color="text.primary">
+                Service Invoices (Installer N/A Match)
+              </Typography>
+            }
+            subheader={
+              <Typography variant="body2" color="text.secondary">
+                Service invoices with search, pagination, and quick action edit
+              </Typography>
+            }
+            action={
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ minWidth: { xs: 220, sm: 420 } }}>
+                <TextField
+                  size="small"
+                  placeholder="Search invoice no, customer, employee, installer..."
+                  value={serviceInvoicesSearch}
+                  onChange={(e) => setServiceInvoicesSearch(e.target.value)}
+                  sx={{ minWidth: { xs: 220, sm: 260 } }}
+                />
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel id="service-installer-filter-label">Installer</InputLabel>
+                  <Select
+                    labelId="service-installer-filter-label"
+                    value={serviceInstallerFilter}
+                    label="Installer"
+                    onChange={(e) => setServiceInstallerFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="na-only">N/A only</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+            }
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Invoice No</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Customer Name</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Employee</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Installer</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Store Branch</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="right">Total</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Payment Status</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Invoice Date</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {serviceInvoicesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={15} align="center" sx={{ py: 3 }}>
+                        <CircularProgress size={22} />
+                      </TableCell>
+                    </TableRow>
+                  ) : serviceInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={15} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No service invoices found</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    serviceInvoices
+                      .filter((inv) => {
+                        const q = serviceInvoicesSearch.trim().toLowerCase();
+                        if (!q) return true;
+
+                        const invoiceNo = String(inv.invoiceNo || inv.invoice_no || inv.invoiceNumber || '').toLowerCase();
+                        const customerName = String(inv.customerName || inv.customer?.name || '').toLowerCase();
+                        const employeeName = String(inv.employeeName || inv.employee?.name || '').toLowerCase();
+                        const installerName = String(inv.installerName || inv.installer?.name || '').toLowerCase();
+                        const storeBranch = String(inv.storeBranch?.name || inv.storeBranchName || inv.branchName || '').toLowerCase();
+                        const totalRaw = Number(inv.total || inv.totalAmount || 0);
+                        const totalFormatted = fmtCurrency(totalRaw).toLowerCase();
+                        const totalWithPeso = `₱${fmtCurrency(totalRaw)}`.toLowerCase();
+                        const paymentStatus = String(inv.paymentStatus || inv.status || '').toLowerCase();
+                        const invoiceDateFormatted = inv.invoiceDate ? dayjs(inv.invoiceDate).format('MMM DD, YYYY').toLowerCase() : '';
+                        const invoiceDateRaw = inv.invoiceDate ? String(inv.invoiceDate).toLowerCase() : '';
+
+                        return (
+                          invoiceNo.includes(q) ||
+                          customerName.includes(q) ||
+                          employeeName.includes(q) ||
+                          installerName.includes(q) ||
+                          storeBranch.includes(q) ||
+                          String(totalRaw).includes(q) ||
+                          totalFormatted.includes(q) ||
+                          totalWithPeso.includes(q) ||
+                          paymentStatus.includes(q) ||
+                          invoiceDateFormatted.includes(q) ||
+                          invoiceDateRaw.includes(q)
+                        );
+                      })
+                      .map((inv, idx) => {
+                        const statusRaw = inv.paymentStatus || inv.status || 'pending';
+                        const statusLabel = String(statusRaw);
+                        const statusKey = statusLabel.toLowerCase();
+                        return (
+                          <TableRow key={inv._id || inv.id || idx} hover>
+                            <TableCell>{inv.invoiceNo || inv.invoice_no || inv.invoiceNumber || '—'}</TableCell>
+                            <TableCell>{inv.customerName || inv.customer?.name || '—'}</TableCell>
+                            <TableCell>{inv.employeeName || inv.employee?.name || '—'}</TableCell>
+                            <TableCell>{inv.installerName || inv.installer?.name || 'n/a'}</TableCell>
+                            <TableCell>{inv.storeBranch?.name || inv.storeBranchName || inv.branchName || '—'}</TableCell>
+                            <TableCell align="right">₱{fmtCurrency(Number(inv.total || inv.totalAmount || 0))}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={statusLabel}
+                                size="small"
+                                color={STATUS_COLORS[statusKey] || 'default'}
+                                sx={{ textTransform: 'capitalize', fontSize: '0.75rem', height: 24 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {inv.invoiceDate ? dayjs(inv.invoiceDate).format('MMM DD, YYYY') : '—'}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Stack direction="row" spacing={0.5} justifyContent="center">
+                                <Tooltip title="View">
+                                  <IconButton
+                                    size="small"
+                                    color="info"
+                                    component={Link}
+                                    href={`/invoices/service?viewId=${inv._id || inv.id}`}
+                                  >
+                                    <VisibilityIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                  <IconButton
+                                    size="small"
+                                    color="warning"
+                                    component={Link}
+                                    href={`/invoices/service?editId=${inv._id || inv.id}`}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={serviceInvoicesTotal}
+              page={serviceInvoicesPage}
+              onPageChange={(_, newPage) => setServiceInvoicesPage(newPage)}
+              rowsPerPage={serviceInvoicesRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setServiceInvoicesRowsPerPage(parseInt(e.target.value, 10));
+                setServiceInvoicesPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Stock Alerts Panel ── */}
       {lowStockItems.length > 0 && (
