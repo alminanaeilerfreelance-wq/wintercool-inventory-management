@@ -147,7 +147,7 @@ export default function DashboardPage() {
   const [customerInvoicesPage, setCustomerInvoicesPage] = useState(0);
   const [customerInvoicesRowsPerPage, setCustomerInvoicesRowsPerPage] = useState(10);
   const [customerInvoicesTotal, setCustomerInvoicesTotal] = useState(0);
-  const [installerFilter, setInstallerFilter] = useState('all');
+  const [installerFilter, setInstallerFilter] = useState('n/a');
   const [customerInvoicesSearch, setCustomerInvoicesSearch] = useState('');
 
   const [serviceInvoices, setServiceInvoices] = useState([]);
@@ -195,9 +195,9 @@ export default function DashboardPage() {
       const res = await api.get(`/invoices?${params.toString()}`);
       const d = res.data?.data || res.data;
       const items = Array.isArray(d) ? d : d?.items || d?.invoices || [];
-      const filteredItems = installerFilter === 'na-only' ? items.filter(isInstallerNA) : items;
+      const filteredItems = installerFilter === 'n/a' ? items.filter(isInstallerNA) : items;
       setCustomerInvoices(filteredItems);
-      setCustomerInvoicesTotal(installerFilter === 'na-only'
+      setCustomerInvoicesTotal(installerFilter === 'n/a'
         ? filteredItems.length
         : (res.data?.total || res.data?.pagination?.total || items.length));
     } catch (err) {
@@ -1284,7 +1284,7 @@ export default function DashboardPage() {
                     onChange={(e) => setInstallerFilter(e.target.value)}
                   >
                     <MenuItem value="all">All</MenuItem>
-                    <MenuItem value="na-only">N/A only</MenuItem>
+                    <MenuItem value="n/a">N/A only</MenuItem>
                   </Select>
                 </FormControl>
               </Stack>

@@ -1,13 +1,8 @@
-- [x] Add client-side memoized search filtering for customer invoices table
-- [x] Ensure searchable fields include: Invoice No, Customer, Employee, Installer, Branch, Subtotal, Total, VAT, Status, Date
-- [x] Wire DataTable rows to filtered dataset
-- [ ] Verify no regressions in pagination/search behavior
+# TODO - Fix login ERR_CONNECTION_REFUSED
 
-## Dashboard Service Invoices N/A Match - TODO
-
-- [ ] Add dashboard state for service invoices (rows/loading/page/rowsPerPage/total/search/filter)
-- [ ] Implement `fetchServiceInvoices` with API params + N/A installer matching logic
-- [ ] Add Service Invoices dashboard table UI with search/filter/actions
-- [ ] Add pagination handlers for service invoices table
-- [ ] Verify edit/view actions navigate to `/invoices/service` with query params
-- [ ] Run frontend lint check and resolve issues if any
+- [x] Verify backend is listening on port 5000
+- [x] Start backend server if it is not running
+- [x] Verify backend auth endpoint reachability
+- [x] Validate frontend API base URL points to running backend
+- [ ] Restart frontend if env/config changes are needed
+- [ ] Re-test login flow
