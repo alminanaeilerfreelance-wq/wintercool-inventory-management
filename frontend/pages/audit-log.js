@@ -145,7 +145,7 @@ User: typeof log.user === 'string' ? log.user : log.user?.name || log.userName |
     if (!clearBefore) { enqueueSnackbar('Select a date', { variant: 'warning' }); return; }
     setClearing(true);
     try {
-      await api.delete('/audit-logs', { data: { before: clearBefore } });
+      await api.delete('/audit-logs/clear', { params: { before: clearBefore } });
       enqueueSnackbar('Audit logs cleared', { variant: 'success' });
       setClearOpen(false);
       setClearBefore('');

@@ -131,6 +131,69 @@ npm run dev
 **System Status:** ✅ FULLY OPERATIONAL
 
 
-git branch -M main              
-git remote add origin https://github.com/alminanaeilerfreelance-wq/scoreboard.git
-git push -u origin main      
+create a .md for claude
+- [] dashboard page
+     - total inventory card
+     - monthly sales card 
+     - upcoming events 
+     - sales &purchase orders trend
+     - stocks Distribution
+     - upcoming events calendar
+     - Customer Invoices tables
+     - Service Invoices (Installer N/A Match) 
+        - modify the design to a professional one
+        - filtered the installer  n/a display
+        - The view action must open the  Service Invoice Details    
+           -  Service Invoice Details  must display the  
+               Serial No, Barcode,	Product Name, SRP,	Qty,	Total        
+          - The edit action must open the Edit Service Invoice
+     - Purchase Orders
+        - Modify the design to a professional one and create a table
+        - add pagination, searching for. the  I
+          -Invoice No,	Supplier,	Warehouse,	Employee,	Total,	Status,	Approved  
+          - filtered to pending, 
+          - action for approved and rejected     
+     - Stock Alerts 
+        - modify the design to a professional 
+        - add pagination, searching for. the  Product,	Brand,	Warehouse,	Qty,	Status 
+
+   Master data on all pages, add the searching every table
+        - Brands  pages add -searching for  - Name,	Description,	Status,	Created Date
+       -  Designs pages add the searching for Name, Description,	and Status
+       - Customers' pages add searching for  Name,	Email,	Contact,	Address,	and Status
+       - Suppliers' pages add the searching for Name,	Email,	Contact,	and Status
+       - Employees' pages add the searching for  Employee ID,	Name,	Position,	Department,	      Store Branch,	and Status
+       - Categories pages add searching for Name,	Description,	and Status
+       -  Products page add searching for Name,	Category,	Brand,	Status
+       - Store Branches page searching for Name,	Address,	Contact,	Manager,	Status
+-Stock Adjustments page: modify the design and make it a professional design
+       - add color indication for the status
+-Customer Invoices page: modify the design into a professional design
+-Service Invoices page  modify the design into a professional design
+
+Reports 
+-Sales Report pages display the data  in the table and fix the searching for    
+  -Date,	Invoice No,	Customer,	Branch,	Qty,	Price,	Subtotal,	Total 
+
+-Services Report pages display the data  in the table and fix the searching for    
+  -Date,	Invoice No,	Customer,	Service,	Qty,	Price,	Total,	Status
+
+
+-Suppllier Report pages display the data  in the table and fix the searching for    
+  -Date,	Invoice No,	Customer,	Service,	Qty,	Price,	Total,	Status
+
+User Management page 
+make it a professional design
+
+Audit Log page 
+ -fix the error for the clear logs , export excel
+
+-create a backup page 
+  - backup database export and import button
+
+-create message page 
+ - The admin and user have communication via chat 
+ - The user can create a group chat 
+
+header 
+-Add a message notification for the users 

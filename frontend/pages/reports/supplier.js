@@ -39,7 +39,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import MainLayout from '../../components/Layout/MainLayout';
 import ReportPrint from '../../components/Reports/ReportPrint';
 import PageHeader from '../../components/Common/PageHeader';
-import { getReports, exportReport } from '../../utils/api';
+import { getReports, exportReportExcel } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
@@ -87,6 +87,7 @@ export default function SupplierReportPage() {
   }, [suppliersLoaded]);
 
   React.useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
+  React.useEffect(() => { handleGenerate(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totals = reportData.reduce(
     (acc, row) => ({
@@ -121,7 +122,7 @@ export default function SupplierReportPage() {
 
   const handleExportExcel = async () => {
     try {
-      const res = await exportReport('supplier', {
+      const res = await exportReportExcel('supplier', {
         dateFrom: dateFrom?.toISOString(),
         dateTo: dateTo?.toISOString(),
         supplier: supplierId || undefined,
@@ -279,46 +280,68 @@ export default function SupplierReportPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reportData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                          <Typography variant="body2" color="text.secondary">No data found</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      <>
-                        {reportData.map((row, i) => (
-                          <TableRow key={row._id || row.id || i} sx={{ bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50' }}>
-                            <TableCell>{row.createdAt || row.date ? dayjs(row.createdAt || row.date).format('MMM DD, YYYY') : '—'}</TableCell>
-                            <TableCell>{row.invoiceNo || row.invoice_no || '—'}</TableCell>
-                            <TableCell>{row.supplier?.name || row.supplierName || '—'}</TableCell>
-                            <TableCell>{row.warehouse?.name || row.warehouseName || '—'}</TableCell>
-                            <TableCell>{row.itemsCount || row.items?.length || 0}</TableCell>
-                            <TableCell>{fmt(row.total)}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={row.status || 'pending'}
-                                size="small"
-                                color={STATUS_COLORS[row.status] || 'default'}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={row.approved ? 'Yes' : 'No'}
-                                size="small"
-                                color={row.approved ? 'success' : 'default'}
-                              />
+                    {(() => {
+                      const q = search.trim().toLowerCase();
+                      const filtered = q
+                        ? reportData.filter((row) => {
+                            const date = row.createdAt || row.date ? dayjs(row.createdAt || row.date).format('MMM DD, YYYY').toLowerCase() : '';
+                            const invoiceNo = String(row.invoiceNo || row.invoice_no || '').toLowerCase();
+                            const supplier = String(row.supplier?.name || row.supplierName || '').toLowerCase();
+                            const warehouse = String(row.warehouse?.name || row.warehouseName || '').toLowerCase();
+                            const status = String(row.status || '').toLowerCase();
+                            const total = String(row.total || '').toLowerCase();
+                            const itemsCount = String(row.itemsCount || row.items?.length || '').toLowerCase();
+                            return date.includes(q) || invoiceNo.includes(q) || supplier.includes(q) || warehouse.includes(q) || status.includes(q) || total.includes(q) || itemsCount.includes(q);
+                          })
+                        : reportData;
+                      if (filtered.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                              <Typography variant="body2" color="text.secondary">No data found</Typography>
                             </TableCell>
                           </TableRow>
-                        ))}
-                        <TableRow sx={{ bgcolor: 'grey.200' }}>
-                          <TableCell colSpan={4} sx={{ fontWeight: 700 }}>TOTALS</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{totals.itemsCount}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{fmt(totals.total)}</TableCell>
-                          <TableCell colSpan={2} />
-                        </TableRow>
-                      </>
-                    )}
+                        );
+                      }
+                      const filteredTotals = filtered.reduce((acc, row) => ({
+                        itemsCount: acc.itemsCount + (row.itemsCount || row.items?.length || 0),
+                        total: acc.total + (row.total || 0),
+                      }), { itemsCount: 0, total: 0 });
+                      return (
+                        <>
+                          {filtered.map((row, i) => (
+                            <TableRow key={row._id || row.id || i} sx={{ bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50' }}>
+                              <TableCell>{row.createdAt || row.date ? dayjs(row.createdAt || row.date).format('MMM DD, YYYY') : '—'}</TableCell>
+                              <TableCell>{row.invoiceNo || row.invoice_no || '—'}</TableCell>
+                              <TableCell>{row.supplier?.name || row.supplierName || '—'}</TableCell>
+                              <TableCell>{row.warehouse?.name || row.warehouseName || '—'}</TableCell>
+                              <TableCell>{row.itemsCount || row.items?.length || 0}</TableCell>
+                              <TableCell>₱{fmt(row.total)}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={row.status || 'pending'}
+                                  size="small"
+                                  color={STATUS_COLORS[row.status] || 'default'}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={row.isApproved || row.approved ? 'Yes' : 'No'}
+                                  size="small"
+                                  color={row.isApproved || row.approved ? 'success' : 'default'}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow sx={{ bgcolor: 'grey.200' }}>
+                            <TableCell colSpan={4} sx={{ fontWeight: 700 }}>TOTALS</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{filteredTotals.itemsCount}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>₱{fmt(filteredTotals.total)}</TableCell>
+                            <TableCell colSpan={2} />
+                          </TableRow>
+                        </>
+                      );
+                    })()}
                   </TableBody>
                 </Table>
               </TableContainer>

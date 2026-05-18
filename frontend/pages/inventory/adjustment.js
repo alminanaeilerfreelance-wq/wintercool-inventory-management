@@ -781,34 +781,46 @@ export default function AdjustmentPage() {
           <TableContainer>
             <Table size="small">
               <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Invoice No</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Created By</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Items Count</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Notes</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }} align="center">Actions</TableCell>
+                <TableRow sx={{ bgcolor: '#6a1b9a' }}>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Invoice No</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Date</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Created By</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Items Count</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }}>Notes</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'white' }} align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {recentLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : recentAdjustments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                       <Typography variant="body2" color="text.secondary">
                         No recent adjustments
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  recentAdjustments.map((adj) => (
-                    <TableRow key={adj._id || adj.id} hover>
-                      <TableCell>{adj.invoiceNo || adj.invoice_no || '—'}</TableCell>
+                  recentAdjustments.map((adj, idx) => {
+                    const adjType = adj.type || 'increment';
+                    const isIncrement = adjType === 'increment';
+                    return (
+                    <TableRow key={adj._id || adj.id} hover sx={{ bgcolor: idx % 2 === 0 ? 'background.paper' : 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>{adj.invoiceNo || adj.invoice_no || '—'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={isIncrement ? 'Increment' : 'Decrement'}
+                          size="small"
+                          color={isIncrement ? 'success' : 'error'}
+                          sx={{ fontWeight: 600, fontSize: '0.75rem', height: 24 }}
+                        />
+                      </TableCell>
                       <TableCell>
                         {adj.createdAt ? dayjs(adj.createdAt).format('MMM DD, YYYY') : '—'}
                       </TableCell>
@@ -849,7 +861,8 @@ export default function AdjustmentPage() {
                         </Stack>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

@@ -9,6 +9,7 @@ import BerryLayout from '../BerryLayout/BerryLayout';
 
 import {
   AssessmentIcon,
+  BackupIcon,
   CalendarMonthIcon,
   CloudUploadIcon,
   DashboardIcon,
@@ -181,7 +182,10 @@ export default function MainLayoutShim({ children }) {
   const navItems = [
     ...baseNavItems,
     ...(user?.role === 'admin' || user?.role === 'superadmin'
-      ? [{ group: 'System', label: 'Audit Log', icon: <AssessmentIcon />, href: '/audit-log' }]
+      ? [
+          { group: 'System', label: 'Audit Log', icon: <AssessmentIcon />, href: '/audit-log' },
+          { group: 'System', label: 'Backup', icon: <BackupIcon />, href: '/backup' },
+        ]
       : []),
   ];
 

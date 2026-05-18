@@ -89,6 +89,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/audit-logs', require('./routes/auditLogs'));
 app.use('/api/security-alerts', require('./routes/securityAlerts'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/backup', require('./routes/backup'));
 
 app.get('/', (req, res) => res.json({ message: 'WMS API running', secure: true }));
 

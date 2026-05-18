@@ -1,4 +1,5 @@
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import BackupIcon from '@mui/icons-material/Backup';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -18,6 +19,7 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 
 export {
   AssessmentIcon,
+  BackupIcon,
   CalendarMonthIcon,
   CloudUploadIcon,
   DashboardIcon,

@@ -159,6 +159,19 @@ export default function DashboardPage() {
   const [serviceInstallerFilter, setServiceInstallerFilter] = useState('na-only');
   const [serviceInvoicesSearch, setServiceInvoicesSearch] = useState('');
 
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
+  const [purchaseOrdersPage, setPurchaseOrdersPage] = useState(0);
+  const [purchaseOrdersRowsPerPage, setPurchaseOrdersRowsPerPage] = useState(10);
+  const [purchaseOrdersTotal, setPurchaseOrdersTotal] = useState(0);
+  const [purchaseOrdersSearch, setPurchaseOrdersSearch] = useState('');
+  const [purchaseOrdersStatusFilter, setPurchaseOrdersStatusFilter] = useState('pending');
+  const [poActionLoading, setPoActionLoading] = useState(null);
+
+  const [stockAlertsSearch, setStockAlertsSearch] = useState('');
+  const [stockAlertsPage, setStockAlertsPage] = useState(0);
+  const [stockAlertsRowsPerPage, setStockAlertsRowsPerPage] = useState(10);
+
   const handleSocketNotification = useCallback((data) => {
     setNotifBadge((prev) => prev + 1);
     setNotifications((prev) => [{ _id: Date.now(), message: data.message || 'New notification', type: data.type, createdAt: new Date().toISOString(), read: false }, ...prev]);
@@ -341,6 +354,53 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  const fetchPurchaseOrders = useCallback(async () => {
+    if (!isAdmin) return;
+    setPurchaseOrdersLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: (purchaseOrdersPage + 1).toString(),
+        limit: purchaseOrdersRowsPerPage.toString(),
+        ...(purchaseOrdersStatusFilter && { status: purchaseOrdersStatusFilter }),
+        ...(purchaseOrdersSearch && { search: purchaseOrdersSearch }),
+      });
+      const res = await api.get(`/purchase-orders?${params.toString()}`);
+      const d = res.data;
+      setPurchaseOrders(d.items || []);
+      setPurchaseOrdersTotal(d.total || 0);
+    } catch (err) {
+      console.error('Purchase orders fetch error:', err);
+      setPurchaseOrders([]);
+      setPurchaseOrdersTotal(0);
+    } finally {
+      setPurchaseOrdersLoading(false);
+    }
+  }, [isAdmin, purchaseOrdersPage, purchaseOrdersRowsPerPage, purchaseOrdersStatusFilter, purchaseOrdersSearch]);
+
+  const handlePoApprove = async (id) => {
+    setPoActionLoading(id + '_approve');
+    try {
+      await api.put(`/purchase-orders/${id}/approve`);
+      fetchPurchaseOrders();
+    } catch (err) {
+      console.error('Approve error:', err);
+    } finally {
+      setPoActionLoading(null);
+    }
+  };
+
+  const handlePoReject = async (id) => {
+    setPoActionLoading(id + '_reject');
+    try {
+      await api.put(`/purchase-orders/${id}/reject`);
+      fetchPurchaseOrders();
+    } catch (err) {
+      console.error('Reject error:', err);
+    } finally {
+      setPoActionLoading(null);
+    }
+  };
+
   useEffect(() => {
     fetchCustomerInvoices();
   }, [fetchCustomerInvoices]);
@@ -348,6 +408,10 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchServiceInvoices();
   }, [fetchServiceInvoices]);
+
+  useEffect(() => {
+    fetchPurchaseOrders();
+  }, [fetchPurchaseOrders]);
 
   useEffect(() => {
     setCustomerInvoicesPage(0);
@@ -364,6 +428,10 @@ export default function DashboardPage() {
   useEffect(() => {
     setServiceInvoicesPage(0);
   }, [serviceInvoicesSearch]);
+
+  useEffect(() => {
+    setPurchaseOrdersPage(0);
+  }, [purchaseOrdersSearch, purchaseOrdersStatusFilter]);
 
   if (loading) {
     return (
@@ -1237,6 +1305,173 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {/* ── Purchase Orders Section ── */}
+      {isAdmin && (
+        <Card
+          elevation={0}
+          sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 4 }}
+        >
+          <CardHeader
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ bgcolor: 'primary.dark', width: 40, height: 40 }}>
+                  <ShoppingCartIcon sx={{ color: 'white', fontSize: 22 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight={700}>Purchase Orders</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage and approve incoming purchase orders
+                  </Typography>
+                </Box>
+              </Box>
+            }
+            action={
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ minWidth: { xs: 220, sm: 420 } }}>
+                <TextField
+                  size="small"
+                  placeholder="Search by invoice no..."
+                  value={purchaseOrdersSearch}
+                  onChange={(e) => setPurchaseOrdersSearch(e.target.value)}
+                  sx={{ minWidth: { xs: 180, sm: 220 } }}
+                />
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel id="po-status-filter-label">Status</InputLabel>
+                  <Select
+                    labelId="po-status-filter-label"
+                    value={purchaseOrdersStatusFilter}
+                    label="Status"
+                    onChange={(e) => setPurchaseOrdersStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="approved">Approved</MenuItem>
+                    <MenuItem value="rejected">Rejected</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+            }
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Invoice No</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Supplier</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Warehouse</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Employee</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="right">Total</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="center">Status</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="center">Approved</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem' }} align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {purchaseOrdersLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                        <CircularProgress size={22} />
+                      </TableCell>
+                    </TableRow>
+                  ) : purchaseOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No purchase orders found</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    purchaseOrders.map((po, idx) => {
+                      const statusKey = (po.status || 'pending').toLowerCase();
+                      const statusColor = statusKey === 'approved' ? 'success' : statusKey === 'rejected' ? 'error' : 'warning';
+                      const isPending = statusKey === 'pending';
+                      const poId = po._id || po.id;
+                      return (
+                        <TableRow key={poId || idx} hover>
+                          <TableCell sx={{ fontWeight: 600 }}>{po.invoiceNo || '—'}</TableCell>
+                          <TableCell>{po.supplier?.name || po.supplierName || '—'}</TableCell>
+                          <TableCell>{po.warehouse?.name || po.warehouseName || '—'}</TableCell>
+                          <TableCell>{po.employee?.name || po.employeeName || '—'}</TableCell>
+                          <TableCell align="right">₱{fmtCurrency(Number(po.totalAmount || po.total || 0))}</TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={po.status || 'pending'}
+                              size="small"
+                              color={statusColor}
+                              sx={{ textTransform: 'capitalize', fontSize: '0.75rem', height: 24 }}
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={po.isApproved ? 'Yes' : 'No'}
+                              size="small"
+                              color={po.isApproved ? 'success' : 'default'}
+                              sx={{ fontSize: '0.75rem', height: 24 }}
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            {isPending ? (
+                              <Stack direction="row" spacing={0.5} justifyContent="center">
+                                <Tooltip title="Approve">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="success"
+                                      disabled={!!poActionLoading}
+                                      onClick={() => handlePoApprove(poId)}
+                                    >
+                                      {poActionLoading === poId + '_approve' ? (
+                                        <CircularProgress size={14} color="success" />
+                                      ) : (
+                                        <TrendingUpIcon fontSize="small" />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                                <Tooltip title="Reject">
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      disabled={!!poActionLoading}
+                                      onClick={() => handlePoReject(poId)}
+                                    >
+                                      {poActionLoading === poId + '_reject' ? (
+                                        <CircularProgress size={14} color="error" />
+                                      ) : (
+                                        <TrendingDownIcon fontSize="small" />
+                                      )}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </Stack>
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">—</Typography>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={purchaseOrdersTotal}
+              page={purchaseOrdersPage}
+              onPageChange={(_, newPage) => setPurchaseOrdersPage(newPage)}
+              rowsPerPage={purchaseOrdersRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setPurchaseOrdersRowsPerPage(parseInt(e.target.value, 10));
+                setPurchaseOrdersPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Stock Alerts Panel ── */}
       {lowStockItems.length > 0 && (
         <Card
@@ -1265,6 +1500,15 @@ export default function DashboardPage() {
                 </Box>
               </Box>
             }
+            action={
+              <TextField
+                size="small"
+                placeholder="Search product, brand, warehouse, status..."
+                value={stockAlertsSearch}
+                onChange={(e) => { setStockAlertsSearch(e.target.value); setStockAlertsPage(0); }}
+                sx={{ minWidth: 260 }}
+              />
+            }
             sx={{ pb: 1 }}
           />
           <CardContent sx={{ pt: 0 }}>
@@ -1280,51 +1524,96 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {lowStockItems.map((item, idx) => {
-                    const isOut = item.stockStatus === 'out_of_stock' || item.stockStatus === 'Out of Stock';
-                    return (
-                      <TableRow
-                        key={item._id || idx}
-                        sx={{
-                          bgcolor: isOut ? 'rgba(244, 67, 54, 0.08)' : 'transparent',
-                          '&:hover': { bgcolor: isOut ? 'rgba(244, 67, 54, 0.12)' : 'rgba(255, 152, 0, 0.08)' },
-                          transition: 'background-color 0.2s ease',
-                        }}
-                      >
-                        <TableCell sx={{ fontSize: '0.875rem' }}>
-                          <Typography variant="body2" fontWeight={600}>
-                            {item.productName?.name || item.product?.name || '—'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ fontSize: '0.875rem' }}>{item.brand?.name || '—'}</TableCell>
-                        <TableCell sx={{ fontSize: '0.875rem' }}>{item.warehouse?.name || '—'}</TableCell>
-                        <TableCell align="center">
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                            color={isOut ? 'error.main' : 'warning.main'}
-                            sx={{ fontSize: '0.875rem' }}
-                          >
-                            {item.quantity ?? 0}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={isOut ? 'Out of Stock' : 'Low Stock'}
-                            size="small"
-                            color={isOut ? 'error' : 'warning'}
-                            sx={{
-                              fontSize: '0.75rem',
-                              height: 24,
-                            }}
-                          />
+                  {(() => {
+                    const q = stockAlertsSearch.trim().toLowerCase();
+                    const filtered = q
+                      ? lowStockItems.filter((item) => {
+                          const productName = String(item.productName?.name || item.product?.name || '').toLowerCase();
+                          const brand = String(item.brand?.name || '').toLowerCase();
+                          const warehouse = String(item.warehouse?.name || '').toLowerCase();
+                          const qty = String(item.quantity ?? 0);
+                          const isOut = item.stockStatus === 'out_of_stock' || item.stockStatus === 'Out of Stock';
+                          const status = isOut ? 'out of stock' : 'low stock';
+                          return productName.includes(q) || brand.includes(q) || warehouse.includes(q) || qty.includes(q) || status.includes(q);
+                        })
+                      : lowStockItems;
+                    const paginated = filtered.slice(
+                      stockAlertsPage * stockAlertsRowsPerPage,
+                      stockAlertsPage * stockAlertsRowsPerPage + stockAlertsRowsPerPage
+                    );
+                    return paginated.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                          <Typography variant="body2" color="text.secondary">No items match your search</Typography>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ) : paginated.map((item, idx) => {
+                      const isOut = item.stockStatus === 'out_of_stock' || item.stockStatus === 'Out of Stock';
+                      return (
+                        <TableRow
+                          key={item._id || idx}
+                          sx={{
+                            bgcolor: isOut ? 'rgba(244, 67, 54, 0.08)' : 'transparent',
+                            '&:hover': { bgcolor: isOut ? 'rgba(244, 67, 54, 0.12)' : 'rgba(255, 152, 0, 0.08)' },
+                            transition: 'background-color 0.2s ease',
+                          }}
+                        >
+                          <TableCell sx={{ fontSize: '0.875rem' }}>
+                            <Typography variant="body2" fontWeight={600}>
+                              {item.productName?.name || item.product?.name || '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>{item.brand?.name || '—'}</TableCell>
+                          <TableCell sx={{ fontSize: '0.875rem' }}>{item.warehouse?.name || '—'}</TableCell>
+                          <TableCell align="center">
+                            <Typography
+                              variant="body2"
+                              fontWeight={700}
+                              color={isOut ? 'error.main' : 'warning.main'}
+                              sx={{ fontSize: '0.875rem' }}
+                            >
+                              {item.quantity ?? 0}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={isOut ? 'Out of Stock' : 'Low Stock'}
+                              size="small"
+                              color={isOut ? 'error' : 'warning'}
+                              sx={{ fontSize: '0.75rem', height: 24 }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={(() => {
+                const q = stockAlertsSearch.trim().toLowerCase();
+                if (!q) return lowStockItems.length;
+                return lowStockItems.filter((item) => {
+                  const productName = String(item.productName?.name || item.product?.name || '').toLowerCase();
+                  const brand = String(item.brand?.name || '').toLowerCase();
+                  const warehouse = String(item.warehouse?.name || '').toLowerCase();
+                  const qty = String(item.quantity ?? 0);
+                  const isOut = item.stockStatus === 'out_of_stock' || item.stockStatus === 'Out of Stock';
+                  const status = isOut ? 'out of stock' : 'low stock';
+                  return productName.includes(q) || brand.includes(q) || warehouse.includes(q) || qty.includes(q) || status.includes(q);
+                }).length;
+              })()}
+              page={stockAlertsPage}
+              onPageChange={(_, newPage) => setStockAlertsPage(newPage)}
+              rowsPerPage={stockAlertsRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setStockAlertsRowsPerPage(parseInt(e.target.value, 10));
+                setStockAlertsPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       )}
