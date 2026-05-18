@@ -142,6 +142,7 @@ export default function ServiceInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showDeadlineAlert, setShowDeadlineAlert] = useState(false);
   const [upcomingInvoices, setUpcomingInvoices] = useState([]);
+  const [installerFilter, setInstallerFilter] = useState('all');
 
   const [employees, setEmployees] = useState([]);
   const [storeBranches, setStoreBranches] = useState([]);
@@ -622,6 +623,18 @@ const handleFormSubmit = async () => {
     };
   }, [rows, total]);
 
+  const isInstallerNA = (inv) => {
+    const installerObjName = typeof inv.installer === 'object' ? inv.installer?.name : '';
+    const installerDirect = typeof inv.installer === 'string' ? inv.installer : '';
+    const normalized = String(inv.installerName || installerObjName || installerDirect || '').trim().toLowerCase();
+    return !normalized || ['n/a', 'na', 'none', 'null', 'undefined', '-'].includes(normalized);
+  };
+
+  const filteredRows = React.useMemo(() => {
+    if (installerFilter === 'na-only') return rows.filter(isInstallerNA);
+    return rows;
+  }, [rows, installerFilter]);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <MainLayout title="Service Invoices">
@@ -699,12 +712,23 @@ const handleFormSubmit = async () => {
                 ))}
               </Select>
             </FormControl>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Installer</InputLabel>
+              <Select
+                value={installerFilter}
+                label="Installer"
+                onChange={(e) => { setInstallerFilter(e.target.value); setPage(0); }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="na-only">N/A Only</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
         </Paper>
 
         <DataTable
           columns={columns}
-          rows={rows}
+          rows={filteredRows}
           loading={loading}
           page={page}
           rowsPerPage={rowsPerPage}

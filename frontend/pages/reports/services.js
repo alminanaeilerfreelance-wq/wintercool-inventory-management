@@ -39,13 +39,18 @@ import SearchIcon from '@mui/icons-material/Search';
 import MainLayout from '../../components/Layout/MainLayout';
 import ReportPrint from '../../components/Reports/ReportPrint';
 import PageHeader from '../../components/Common/PageHeader';
-import { getReports, exportReport } from '../../utils/api';
+import { getReports, exportReportExcel } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const normalizeStatus = (s) => {
+  if (!s) return 'Pending';
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+};
 
 const STATUS_COLORS = {
   Pending: 'warning',
@@ -90,6 +95,9 @@ export default function ServicesReportPage() {
 
   React.useEffect(() => { fetchBranches(); }, [fetchBranches]);
 
+  // Auto-generate report on first load
+  React.useEffect(() => { handleGenerate(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const totals = reportData.reduce(
     (acc, row) => ({
       qty: acc.qty + (row.qty || 0),
@@ -124,7 +132,7 @@ export default function ServicesReportPage() {
 
   const handleExportExcel = async () => {
     try {
-      const res = await exportReport('services', {
+      const res = await exportReportExcel('services', {
         dateFrom: dateFrom?.toISOString(),
         dateTo: dateTo?.toISOString(),
         branch: branchId || undefined,
@@ -304,9 +312,9 @@ export default function ServicesReportPage() {
                             <TableCell>{fmt(row.total)}</TableCell>
                             <TableCell>
                               <Chip
-                                label={row.paymentStatus || row.status || 'Pending'}
+                                label={normalizeStatus(row.paymentStatus || row.status)}
                                 size="small"
-                                color={STATUS_COLORS[row.paymentStatus || row.status] || 'default'}
+                                color={STATUS_COLORS[normalizeStatus(row.paymentStatus || row.status)] || 'default'}
                               />
                             </TableCell>
                           </TableRow>
@@ -386,29 +394,33 @@ export default function ServicesReportPage() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {reportData?.map((row, idx) => (
+                        {reportData?.map((row, idx) => {
+                          const rowStatus = row.paymentStatus || row.status || 'Pending';
+                          const normalizedStatus = rowStatus.charAt(0).toUpperCase() + rowStatus.slice(1).toLowerCase();
+                          return (
                           <TableRow key={idx} sx={{ bgcolor: idx % 2 === 0 ? 'white' : '#f8f9fa' }}>
-                            <TableCell sx={{ fontSize: '0.85rem' }}>{dayjs(row.createdAt).format('MMM DD, YYYY')}</TableCell>
+                            <TableCell sx={{ fontSize: '0.85rem' }}>{dayjs(row.invoiceDate || row.date || row.createdAt).format('MMM DD, YYYY')}</TableCell>
                             <TableCell sx={{ fontSize: '0.85rem' }}>{row.invoiceNo || '—'}</TableCell>
-                            <TableCell sx={{ fontSize: '0.85rem' }}>{typeof row.customer === 'string' ? row.customer : row.customer?.customerName || '—'}</TableCell>
-                            <TableCell sx={{ fontSize: '0.85rem' }}>{row.storeBranch?.name || '—'}</TableCell>
-                            <TableCell align="right" sx={{ fontSize: '0.85rem' }}>₱{fmt(row.subtotal)}</TableCell>
-                            <TableCell align="right" sx={{ fontSize: '0.85rem' }}>₱{fmt(row.vatAmount)}</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>₱{fmt(row.totalAmount)}</TableCell>
+                            <TableCell sx={{ fontSize: '0.85rem' }}>{row.customer?.name || row.customerName || '—'}</TableCell>
+                            <TableCell sx={{ fontSize: '0.85rem' }}>{row.branch?.name || row.storeBranch?.name || '—'}</TableCell>
+                            <TableCell align="right" sx={{ fontSize: '0.85rem' }}>₱{fmt(row.price || row.subtotal || 0)}</TableCell>
+                            <TableCell align="right" sx={{ fontSize: '0.85rem' }}>₱{fmt(row.vatAmount || 0)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>₱{fmt(row.total || row.totalAmount || 0)}</TableCell>
                             <TableCell sx={{ fontSize: '0.85rem' }}>
-                              <Chip label={row.status} size="small" color={STATUS_COLORS[row.status] || 'default'} />
+                              <Chip label={normalizedStatus} size="small" color={STATUS_COLORS[normalizedStatus] || 'default'} />
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </TableContainer>
 
                   {/* Totals Box */}
                   <Box sx={{ bgcolor: '#e3f2fd', p: 2, mt: 2, borderRadius: 1, textAlign: 'right' }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>Subtotal: ₱{fmt(summaryTotals?.subtotal)}</Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>VAT (12%): ₱{fmt(summaryTotals?.vat)}</Typography>
-                    <Typography variant="h6" fontWeight={700} sx={{ color: '#1565c0' }}>Total: ₱{fmt(summaryTotals?.total)}</Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Total Services: {totals.qty}</Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Total Price: ₱{fmt(totals.price)}</Typography>
+                    <Typography variant="h6" fontWeight={700} sx={{ color: '#6a1b9a' }}>Grand Total: ₱{fmt(summaryTotals?.total || totals.total)}</Typography>
                   </Box>
 
                   {/* Footer */}

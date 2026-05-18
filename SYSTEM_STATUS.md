@@ -1,3 +1,8 @@
+git commmit -m ""
+it branch -M main                                                          
+git remote add origin https://github.com/alminanaeilerfreelance-wq/wintercool-inventory-management.git
+git push -u origin main
+
 # WMS System Status - WORKING ✅
 
 ## Deployment Status: PRODUCTION READY

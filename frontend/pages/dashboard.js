@@ -23,6 +23,7 @@ import TablePagination from '@mui/material/TablePagination';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Badge from '@mui/material/Badge';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
 import Stack from '@mui/material/Stack';
@@ -423,7 +424,7 @@ export default function DashboardPage() {
             elevation={0}
             sx={{
               mb: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #66ea8b 0%, #764ba2 100%)',
               color: 'white',
               borderRadius: 3,
               border: '1px solid rgba(255,255,255,0.1)',
@@ -489,7 +490,7 @@ export default function DashboardPage() {
 
       {/* ── Key Metrics Cards ── */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+        <Grid item xs={12} sm={4} md={4} lg={4}>
           <Link href="/inventory" passHref legacyBehavior>
             <Box component="a" sx={{ textDecoration: 'none' }}>
               <Card
@@ -498,7 +499,7 @@ export default function DashboardPage() {
                   borderRadius: 3,
                   border: '1px solid',
                   borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'linear-gradient(135deg, #ad8fee 0%, #764ba2 100%)',
                   color: 'white',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -527,116 +528,8 @@ export default function DashboardPage() {
           </Link>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Link href="/master/customers" passHref legacyBehavior>
-            <Box component="a" sx={{ textDecoration: 'none' }}>
-              <Card
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(245, 87, 108, 0.3)',
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                    <PeopleIcon sx={{ fontSize: 28 }} />
-                  </Avatar>
-                  <Typography variant="h4" fontWeight={800} sx={{ mb: 1 }}>
-                    {stats.totalCustomers.toLocaleString()}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                    Customers
-                  </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                    Registered users
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Link>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Link href="/master/suppliers" passHref legacyBehavior>
-            <Box component="a" sx={{ textDecoration: 'none' }}>
-              <Card
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  color: 'white',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(79, 172, 254, 0.3)',
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                    <LocalShippingIcon sx={{ fontSize: 28 }} />
-                  </Avatar>
-                  <Typography variant="h4" fontWeight={800} sx={{ mb: 1 }}>
-                    {stats.totalSuppliers.toLocaleString()}
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                    Suppliers
-                  </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                    Active partners
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Link>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4} lg={2}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-              color: 'white',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 40px rgba(67, 233, 123, 0.3)',
-              },
-            }}
-          >
-            <CardContent sx={{ p: 3, textAlign: 'center' }}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                <BusinessIcon sx={{ fontSize: 28 }} />
-              </Avatar>
-              <Typography variant="h4" fontWeight={800} sx={{ mb: 1 }}>
-                {stats.totalBranches.toLocaleString()}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                Branches
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                Store locations
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+      
+        <Grid item xs={12} sm={4} md={4} lg={4}>
           <Link href="/reports/sales" passHref legacyBehavior>
             <Box component="a" sx={{ textDecoration: 'none' }}>
               <Card
@@ -645,7 +538,7 @@ export default function DashboardPage() {
                   borderRadius: 3,
                   border: '1px solid',
                   borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                  background: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
                   color: 'white',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -674,45 +567,9 @@ export default function DashboardPage() {
           </Link>
         </Grid>
 
-<Grid item xs={12} sm={6} md={4} lg={2}>
-          <Link href="/messages" passHref legacyBehavior>
-            <Box component="a" sx={{ textDecoration: 'none' }}>
-              <Card
-                elevation={0}
-                sx={{
-                  borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)',
-                  color: 'text.primary',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(178, 235, 242, 0.3)',
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.8)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                    <MessageIcon sx={{ fontSize: 28, color: '#00796b' }} />
-                  </Avatar>
-                  <Typography variant="h4" fontWeight={800} sx={{ mb: 1, color: 'text.primary' }}>
-                    Messages
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, color: 'text.primary' }}>
-                    Team Chat
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Realtime messaging
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Link>
-        </Grid>
 
-        <Grid item xs={12} sm={6} md={4} lg={2}>
+
+        <Grid item xs={12} sm={4} md={4} lg={4}>
           <Link href="/master/calendar" passHref legacyBehavior>
             <Box component="a" sx={{ textDecoration: 'none' }}>
               <Card
@@ -721,8 +578,8 @@ export default function DashboardPage() {
                   borderRadius: 3,
                   border: '1px solid',
                   borderColor: 'divider',
-                  background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-                  color: 'text.primary',
+                  background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+                  color: 'white',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
                   '&:hover': {
@@ -732,16 +589,16 @@ export default function DashboardPage() {
                 }}
               >
                 <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.8)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
-                    <CalendarMonthIcon sx={{ fontSize: 28, color: '#667eea' }} />
+                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+                    <CalendarMonthIcon sx={{ fontSize: 28 }} />
                   </Avatar>
-                  <Typography variant="h4" fontWeight={800} sx={{ mb: 1, color: 'text.primary' }}>
+                  <Typography variant="h4" fontWeight={800} sx={{ mb: 1 }}>
                     {upcomingCalendarAlerts.length}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, color: 'text.primary' }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
                     Upcoming Events
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ opacity: 0.7 }}>
                     Next 30 days
                   </Typography>
                 </CardContent>
@@ -850,7 +707,7 @@ export default function DashboardPage() {
               border: '1px solid',
               borderColor: 'divider',
               height: '100%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #7f72d3 100%)',
               color: 'white',
             }}
           >
@@ -861,7 +718,7 @@ export default function DashboardPage() {
                 </Typography>
               }
               subheader={
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
                   Current inventory status
                 </Typography>
               }
@@ -884,14 +741,14 @@ export default function DashboardPage() {
                         <Cell
                           key={`cell-${index}`}
                           fill={['#4facfe', '#f093fb', '#43e97b'][index % 3]}
-                          stroke="rgba(255,255,255,0.3)"
+                          stroke="rgba(59, 55, 55, 0.3)"
                           strokeWidth={2}
                         />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        backgroundColor: 'rgba(23, 23, 23, 0.95)',
                         border: 'none',
                         borderRadius: 8,
                         color: '#333',
@@ -928,321 +785,99 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* ── Activity & Insights Section ── */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Calendar Preview */}
-        <Grid item xs={12} md={6}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
-              background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-            }}
-          >
-            <CardHeader
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CalendarMonthIcon sx={{ color: '#667eea' }} />
-                  <Typography variant="h6" fontWeight={700} color="text.primary">
-                    Upcoming Events
-                  </Typography>
-                </Box>
-              }
-              action={
-                <Link href="/master/calendar" passHref legacyBehavior>
-                  <Box component="a" sx={{
-                    fontSize: 12,
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                    '&:hover': { textDecoration: 'underline' }
-                  }}>
-                    View All →
-                  </Box>
-                </Link>
-              }
-              sx={{ pb: 1 }}
-            />
-            <CardContent sx={{ pt: 0 }}>
-              {upcomingCalendarAlerts.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <CalendarMonthIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                  <Typography variant="body1" color="text.secondary">
-                    No upcoming events in the next 30 days
-                  </Typography>
-                </Box>
-              ) : (
-                <Stack spacing={2}>
-                  {upcomingCalendarAlerts.slice(0, 4).map((ev) => (
-                    <Paper
-                      key={ev._id || ev.id}
-                      elevation={0}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        backgroundColor: 'rgba(255,255,255,0.7)',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(255,255,255,0.9)',
-                          boxShadow: 1,
-                        },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: ev.color || '#667eea', width: 40, height: 40 }}>
-                          <CalendarMonthIcon sx={{ fontSize: 20 }} />
-                        </Avatar>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-                            {ev.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                            {dayjs(ev.startDate || ev.start).format('MMM DD, YYYY')}
-                          </Typography>
-                          <Typography variant="body2" color="text.primary">
-                            {dayjs(ev.startDate || ev.start).format('HH:mm')} - {dayjs(ev.endDate || ev.end).format('HH:mm')}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  ))}
-                </Stack>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
 
-        {/* Notifications Panel */}
-        <Grid item xs={12} md={6}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-            }}
-          >
-            <CardHeader
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <NotificationsIcon />
-                  <Typography variant="h6" fontWeight={700}>
-                    Recent Activity
+      
+
+
+      {/* ── Upcoming Calendar Events ── */}
+      {upcomingCalendarAlerts.length > 0 && (
+        <Card
+          elevation={0}
+          sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 4 }}
+        >
+          <CardHeader
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                  <CalendarMonthIcon sx={{ color: 'white', fontSize: 22 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" fontWeight={700}>Upcoming Events</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {upcomingCalendarAlerts.length} event{upcomingCalendarAlerts.length !== 1 ? 's' : ''} in the next 30 days
                   </Typography>
                 </Box>
-              }
-              action={
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  {stats.lowStockCount > 0 && (
-                    <Chip
-                      label={`${stats.lowStockCount} Low Stock`}
-                      size="small"
-                      sx={{
-                        bgcolor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                      }}
-                      icon={<WarningAmberIcon style={{ color: '#ff9800' }} />}
-                    />
-                  )}
-                  {upcomingCalendarAlerts.length > 0 && (
-                    <Chip
-                      label={`${upcomingCalendarAlerts.length} Events`}
-                      size="small"
-                      sx={{
-                        bgcolor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                      }}
-                      icon={<CalendarMonthIcon style={{ color: '#4caf50' }} />}
-                    />
-                  )}
-                </Box>
-              }
-              sx={{ pb: 1 }}
-            />
-            <CardContent sx={{ pt: 0 }}>
-              <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
-                <NotificationList items={notifications} />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* ── Recent Transactions & Top Products ── */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Recent Invoices */}
-        <Grid item xs={12} lg={7}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
-            }}
-          >
-            <CardHeader
-              title={
-                <Typography variant="h6" fontWeight={700} color="text.primary">
-                  Recent Transactions
-                </Typography>
-              }
-              subheader={
-                <Typography variant="body2" color="text.secondary">
-                  Latest invoice activity
-                </Typography>
-              }
-              sx={{ pb: 1 }}
-            />
-            <CardContent sx={{ pt: 0 }}>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'grey.50' }}>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Invoice #</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Customer</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '0.875rem' }}>Date</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentInvoices.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <AttachMoneyIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-                            <Typography variant="body1" color="text.secondary">
-                              No recent transactions
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      recentInvoices.slice(0, 5).map((inv, idx) => (
-                        <TableRow
-                          key={inv._id || inv.id || idx}
-                          hover
-                          sx={{
-                            '&:hover': { bgcolor: 'grey.50' },
-                            transition: 'background-color 0.2s ease',
-                          }}
-                        >
-                          <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                            {inv.invoiceNumber || inv.number || `INV-${idx + 1}`}
-                          </TableCell>
-                          <TableCell sx={{ fontSize: '0.875rem' }}>
-                            {inv.customerName || inv.customer?.name || '—'}
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 600, color: 'success.main', fontSize: '0.875rem' }}>
-                            ₱{fmtCurrency(inv.total || inv.totalAmount || 0)}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={inv.status || 'pending'}
-                              size="small"
-                              color={STATUS_COLORS[inv.status?.toLowerCase()] || 'default'}
-                              sx={{
-                                textTransform: 'capitalize',
-                                fontSize: '0.75rem',
-                                height: 24,
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
-                            {inv.createdAt
-                              ? dayjs(inv.createdAt).format('MMM DD')
-                              : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Top Products Chart */}
-        <Grid item xs={12} lg={5}>
-          <Card
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              color: 'white',
-            }}
-          >
-            <CardHeader
-              title={
-                <Typography variant="h6" fontWeight={700}>
-                  Top Products
-                </Typography>
-              }
-              subheader={
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Best performing items by quantity
-                </Typography>
-              }
-              sx={{ pb: 1 }}
-            />
-            <CardContent sx={{ pt: 0 }}>
-              <Box sx={{ height: 280 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={topProducts}
-                    layout="horizontal"
-                    margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+            }
+            action={
+              <Link href="/master/calendar" passHref legacyBehavior>
+                <Button component="a" size="small" variant="outlined" startIcon={<CalendarMonthIcon fontSize="small" />}>
+                  View Calendar
+                </Button>
+              </Link>
+            }
+            sx={{ pb: 1 }}
+          />
+          <CardContent sx={{ pt: 0 }}>
+            <Stack spacing={1.5}>
+              {upcomingCalendarAlerts.map((ev, idx) => {
+                const evDate = dayjs(ev.startDate || ev.start);
+                const today = dayjs().startOf('day');
+                const daysUntil = evDate.startOf('day').diff(today, 'day');
+                const isToday = daysUntil === 0;
+                const isTomorrow = daysUntil === 1;
+                const daysLabel = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : `in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
+                const evColor = ev.color || '#667eea';
+                return (
+                  <Box
+                    key={ev._id || ev.id || idx}
+                    sx={{
+                      display: 'flex', alignItems: 'center', gap: 2, p: 1.5,
+                      borderRadius: 2, bgcolor: 'background.paper',
+                      border: '1px solid', borderColor: 'divider',
+                      borderLeft: `4px solid ${evColor}`,
+                      '&:hover': { bgcolor: 'grey.50' },
+                      transition: 'background-color 0.2s ease',
+                    }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.2)" />
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 12, fill: 'white' }}
-                      axisLine={{ stroke: 'rgba(255,255,255,0.3)' }}
+                    <Box sx={{ textAlign: 'center', minWidth: 52 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1 }}>
+                        {evDate.format('MMM')}
+                      </Typography>
+                      <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                        {evDate.format('DD')}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1 }}>
+                        {evDate.format('ddd')}
+                      </Typography>
+                    </Box>
+                    <Divider orientation="vertical" flexItem />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" fontWeight={600}>{ev.title}</Typography>
+                      {ev.description && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          {ev.description}
+                        </Typography>
+                      )}
+                      {ev.storeBranch?.name && (
+                        <Typography variant="caption" color="primary.main">
+                          {ev.storeBranch.name}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Chip
+                      label={daysLabel}
+                      size="small"
+                      color={isToday ? 'error' : isTomorrow ? 'warning' : 'default'}
+                      sx={{ fontWeight: 600, fontSize: '0.7rem' }}
                     />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fontSize: 11, fill: 'white' }}
-                      width={70}
-                      axisLine={{ stroke: 'rgba(255,255,255,0.3)' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        border: 'none',
-                        borderRadius: 8,
-                        color: '#333',
-                      }}
-                      formatter={(value) => [value, 'Quantity']}
-                    />
-                    <Bar
-                      dataKey="quantity"
-                      fill="rgba(255,255,255,0.8)"
-                      radius={[0, 6, 6, 0]}
-                      name="Quantity"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+                  </Box>
+                );
+              })}
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Admin Customer Invoices Table ── */}
       {isAdmin && (
@@ -1562,7 +1197,7 @@ export default function DashboardPage() {
                                     size="small"
                                     color="info"
                                     component={Link}
-                                    href={`/invoices/service?viewId=${inv._id || inv.id}`}
+                                    href={`/invoices/service?id=${inv._id || inv.id}`}
                                   >
                                     <VisibilityIcon fontSize="small" />
                                   </IconButton>

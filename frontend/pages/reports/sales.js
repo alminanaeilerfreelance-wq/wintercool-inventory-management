@@ -39,13 +39,18 @@ import SearchIcon from '@mui/icons-material/Search';
 import MainLayout from '../../components/Layout/MainLayout';
 import ReportPrint from '../../components/Reports/ReportPrint';
 import PageHeader from '../../components/Common/PageHeader';
-import { getReports, exportReport } from '../../utils/api';
+import { getReports, exportReportExcel } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const normalizeStatus = (s) => {
+  if (!s) return 'Pending';
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+};
 
 const STATUS_COLORS = {
   Pending: 'warning',
@@ -90,6 +95,9 @@ export default function SalesReportPage() {
 
   React.useEffect(() => { fetchBranches(); }, [fetchBranches]);
 
+  // Auto-generate report on first load
+  React.useEffect(() => { handleGenerate(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const totals = reportData.reduce(
     (acc, row) => ({
       qty: acc.qty + (row.qty || 0),
@@ -124,7 +132,7 @@ export default function SalesReportPage() {
 
   const handleExportExcel = async () => {
     try {
-      const res = await exportReport('sales', {
+      const res = await exportReportExcel('sales', {
         dateFrom: dateFrom?.toISOString(),
         dateTo: dateTo?.toISOString(),
         branch: branchId || undefined,
@@ -153,6 +161,22 @@ export default function SalesReportPage() {
   ];
 
   const reportTotals = { qty: fmt(totals.qty), subtotal: fmt(totals.subtotal), total: fmt(totals.total) };
+
+  const getRowDate = (row) => row.invoiceDate || row.date || row.createdAt || row.updatedAt;
+  const getRowInvoiceNo = (row) => row.invoiceNo || row.invoice_no || row.number || row.referenceNo || '—';
+  const getRowCustomer = (row) =>
+    row.customer?.name || row.invoiceCustomer?.name || row.customerName || row.clientName || '—';
+  const getRowBranch = (row) =>
+    row.branch?.name || row.storeBranch?.name || row.branchName || row.storeBranchName || '—';
+  const getRowQty = (row) =>
+    Number(row.qty ?? row.quantity ?? row.totalQty ?? row.itemsQty ?? 0);
+  const getRowPrice = (row) =>
+    Number(row.price ?? row.unitPrice ?? row.rate ?? row.sellingPrice ?? 0);
+  const getRowSubtotal = (row) =>
+    Number(row.subtotal ?? row.subTotal ?? row.amount ?? row.netAmount ?? 0);
+  const getRowTotal = (row) =>
+    Number(row.total ?? row.grandTotal ?? row.totalAmount ?? 0);
+  const getRowStatus = (row) => normalizeStatus(row.paymentStatus || row.status || 'Pending');
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -302,19 +326,19 @@ export default function SalesReportPage() {
                       <>
                         {reportData.map((row, i) => (
                           <TableRow key={row._id || row.id || i} sx={{ bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50' }}>
-                            <TableCell>{row.invoiceDate || row.date ? dayjs(row.invoiceDate || row.date).format('MMM DD, YYYY') : '—'}</TableCell>
-                            <TableCell>{row.invoiceNo || row.invoice_no || '—'}</TableCell>
-                            <TableCell>{row.customer?.name || row.customerName || '—'}</TableCell>
-                            <TableCell>{row.branch?.name || row.branchName || '—'}</TableCell>
-                            <TableCell>{fmt(row.qty)}</TableCell>
-                            <TableCell>{fmt(row.price)}</TableCell>
-                            <TableCell>{fmt(row.subtotal)}</TableCell>
-                            <TableCell>{fmt(row.total)}</TableCell>
+                            <TableCell>{getRowDate(row) ? dayjs(getRowDate(row)).format('MMM DD, YYYY') : '—'}</TableCell>
+                            <TableCell>{getRowInvoiceNo(row)}</TableCell>
+                            <TableCell>{getRowCustomer(row)}</TableCell>
+                            <TableCell>{getRowBranch(row)}</TableCell>
+                            <TableCell>{fmt(getRowQty(row))}</TableCell>
+                            <TableCell>{fmt(getRowPrice(row))}</TableCell>
+                            <TableCell>{fmt(getRowSubtotal(row))}</TableCell>
+                            <TableCell>{fmt(getRowTotal(row))}</TableCell>
                             <TableCell>
                               <Chip
-                                label={row.status || 'Pending'}
+                                label={getRowStatus(row)}
                                 size="small"
-                                color={STATUS_COLORS[row.status] || 'default'}
+                                color={STATUS_COLORS[getRowStatus(row)] || 'default'}
                               />
                             </TableCell>
                           </TableRow>
@@ -407,18 +431,18 @@ export default function SalesReportPage() {
                     <TableBody>
                       {reportData.map((row, idx) => (
                         <TableRow key={row._id || row.id || idx} sx={{ '&:nth-of-type(even)': { bgcolor: '#f8f9fa' } }}>
-                          <TableCell sx={{ py: 1.5 }}>{row.invoiceDate || row.date ? dayjs(row.invoiceDate || row.date).format('MMM DD, YYYY') : '—'}</TableCell>
-                          <TableCell sx={{ py: 1.5 }}>{row.invoiceNo || row.invoice_no || '—'}</TableCell>
-                          <TableCell sx={{ py: 1.5 }}>{row.customer?.name || row.customerName || '—'}</TableCell>
-                          <TableCell sx={{ py: 1.5 }}>{row.storeBranch?.name || row.branchName || '—'}</TableCell>
-                          <TableCell align="right" sx={{ py: 1.5 }}>₱{fmt(row.subtotal)}</TableCell>
+                          <TableCell sx={{ py: 1.5 }}>{getRowDate(row) ? dayjs(getRowDate(row)).format('MMM DD, YYYY') : '—'}</TableCell>
+                          <TableCell sx={{ py: 1.5 }}>{getRowInvoiceNo(row)}</TableCell>
+                          <TableCell sx={{ py: 1.5 }}>{getRowCustomer(row)}</TableCell>
+                          <TableCell sx={{ py: 1.5 }}>{getRowBranch(row)}</TableCell>
+                          <TableCell align="right" sx={{ py: 1.5 }}>₱{fmt(getRowSubtotal(row))}</TableCell>
                           <TableCell align="right" sx={{ py: 1.5 }}>₱{fmt(row.vatAmount)}</TableCell>
-                          <TableCell align="right" sx={{ py: 1.5, fontWeight: 600 }}>₱{fmt(row.total)}</TableCell>
+                          <TableCell align="right" sx={{ py: 1.5, fontWeight: 600 }}>₱{fmt(getRowTotal(row))}</TableCell>
                           <TableCell sx={{ py: 1.5 }}>
                             <Chip
-                              label={row.paymentStatus || row.status || 'Pending'}
+                              label={getRowStatus(row)}
                               size="small"
-                              color={STATUS_COLORS[row.paymentStatus || row.status] || 'default'}
+                              color={STATUS_COLORS[getRowStatus(row)] || 'default'}
                             />
                           </TableCell>
                         </TableRow>
@@ -427,7 +451,7 @@ export default function SalesReportPage() {
                       <TableRow sx={{ bgcolor: '#e3f2fd', fontWeight: 700 }}>
                         <TableCell colSpan={4} sx={{ fontWeight: 700, py: 1.5 }}>TOTALS</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700, py: 1.5 }}>₱{fmt(totals.subtotal)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, py: 1.5 }}>₱{fmt(totals.vatAmount)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, py: 1.5 }}>—</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700, py: 1.5, color: '#1565c0' }}>₱{fmt(totals.total)}</TableCell>
                         <TableCell />
                       </TableRow>

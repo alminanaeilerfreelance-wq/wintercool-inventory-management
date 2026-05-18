@@ -149,6 +149,7 @@ export default function CustomerInvoicesPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [installerFilter, setInstallerFilter] = useState('all');
 
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -301,7 +302,7 @@ const openEdit = (row) => {
       discountType: row.discountType || 'fixed',
       discountAmount: row.discountAmount || row.discount || 0,
       vatType: row.vatType || 'exclusive',
-      paymentStatus: row.paymentStatus || row.status || 'Pending',
+      paymentStatus: normalizeStatus(row.paymentStatus || row.status || 'Pending'),
     });
     setEditId(row._id || row.id);
     setFormOpen(true);
@@ -646,6 +647,18 @@ const openEdit = (row) => {
     });
   }, [rows, search]);
 
+  const isInstallerNA = (inv) => {
+    const installerObjName = typeof inv.installer === 'object' ? inv.installer?.name : '';
+    const installerDirect = typeof inv.installer === 'string' ? inv.installer : '';
+    const normalized = String(inv.installerName || installerObjName || installerDirect || '').trim().toLowerCase();
+    return !normalized || ['n/a', 'na', 'none', 'null', 'undefined', '-'].includes(normalized);
+  };
+
+  const finalRows = React.useMemo(() => {
+    if (installerFilter === 'na-only') return filteredRows.filter(isInstallerNA);
+    return filteredRows;
+  }, [filteredRows, installerFilter]);
+
   const invoiceStats = React.useMemo(() => ({
     total: total,
     paid: rows.filter(r => ['Paid','paid'].includes(r.paymentStatus || r.status)).length,
@@ -703,11 +716,24 @@ const openEdit = (row) => {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Installer</InputLabel>
+              <Select
+                value={installerFilter}
+                label="Installer"
+                onChange={(e) => { setInstallerFilter(e.target.value); setPage(0); }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="na-only">N/A Only</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
         </Grid>
 
         <DataTable
           columns={columns}
-          rows={filteredRows}
+          rows={finalRows}
           loading={loading}
           page={page}
           rowsPerPage={rowsPerPage}
