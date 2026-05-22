@@ -119,7 +119,6 @@ const normalizeStatus = (status) => {
 
 const EMPTY_FORM = {
   customerName: '',
-  customerEmail: '',
   customerContact: '',
   customerAddress: '',
   employeeId: '',
@@ -283,7 +282,6 @@ const fetchLookups = useCallback(async () => {
 const openEdit = (row) => {
     setFormData({
       customerName: row.customerName || row.customer?.name || '',
-      customerEmail: row.customerEmail || row.customer?.email || '',
       customerContact: row.customerContact || row.customer?.contact || row.customer?.phone || '',
       customerAddress: row.customerAddress || row.customer?.address || '',
       employeeId: row.employeeId || row.employee?._id || '',
@@ -358,28 +356,45 @@ const openEdit = (row) => {
   const selectedEmployee = employees.find((e) => (e._id || e.id) === formData.employeeId) || null;
   const selectedInstaller = installers.find((i) => (i._id || i.id) === formData.installerId) || null;
 
-  const subtotal = formData.items.reduce((s, it) => s + (it.unitPrice * it.qty || 0), 0);
-  const discount =
-    formData.discountType === 'percent'
-      ? subtotal * (Number(formData.discountAmount) / 100)
-      : Number(formData.discountAmount) || 0;
-  const afterDiscount = subtotal - discount;
-  const vatAmount =
+const subtotal = formData.items.reduce(
+  (s, it) => s + (it.unitPrice * it.qty || 0),
+  0
+);
+
+const discount =
+  formData.discountType === 'percent'
+    ? subtotal * (Number(formData.discountAmount) / 100)
+    : Number(formData.discountAmount) || 0;
+
+  const afterDiscount = Math.max(subtotal - discount, 0);
+
+  // VAT
+  // const vatAmount =
+  //   formData.vatType === 'exclusive'
+  //     ? afterDiscount * vatRate
+  //     : afterDiscount - afterDiscount / (1 + vatRate);
+
+  // // GRAND TOTAL
+  // const grandTotal =
+  //   formData.vatType === 'exclusive'
+  //     ? afterDiscount + vatAmount
+  //     : afterDiscount;
+
+
+    const vatAmount =
     formData.vatType === 'exclusive'
       ? 0
       : afterDiscount - afterDiscount / (1 + vatRate);
   const grandTotal =
     formData.vatType === 'exclusive' ? afterDiscount : afterDiscount + vatAmount;
 
+
   const handleFormSubmit = async () => {
     const trimmedName = String(formData.customerName || '').trim();
-    const trimmedEmail = String(formData.customerEmail || '').trim();
     const trimmedContact = String(formData.customerContact || '').trim();
     const trimmedAddress = String(formData.customerAddress || '').trim();
 
     if (!trimmedName) { enqueueSnackbar('Customer name is required', { variant: 'warning' }); return; }
-    if (!trimmedEmail) { enqueueSnackbar('Customer email is required', { variant: 'warning' }); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { enqueueSnackbar('Invalid customer email format', { variant: 'warning' }); return; }
     if (!trimmedContact) { enqueueSnackbar('Customer contact is required', { variant: 'warning' }); return; }
     if (!trimmedAddress) { enqueueSnackbar('Customer address is required', { variant: 'warning' }); return; }
     if (!formData.items.length) { enqueueSnackbar('At least one product item is required', { variant: 'warning' }); return; }
@@ -403,7 +418,6 @@ const openEdit = (row) => {
       const payload = {
         invoiceType: 'customer',
         customerName: trimmedName,
-        customerEmail: trimmedEmail,
         customerContact: trimmedContact,
         customerAddress: trimmedAddress,
         employeeId: formData.employeeId || undefined,
@@ -820,14 +834,6 @@ const openEdit = (row) => {
                 <Grid item xs={12} md={4}>
                   <Paper variant="outlined" sx={{ p: 1.5 }}>
                     <Typography variant="subtitle2" fontWeight={700} mb={1}>Customer Details</Typography>
-                    <TextField
-                      label="Email"
-                      fullWidth
-                      size="small"
-                      value={formData.customerEmail}
-                      onChange={setF('customerEmail')}
-                      sx={{ mb: 1 }}
-                    />
                     <TextField
                       label="Contact"
                       fullWidth

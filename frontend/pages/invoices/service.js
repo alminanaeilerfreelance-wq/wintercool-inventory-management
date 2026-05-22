@@ -342,7 +342,9 @@ export default function ServiceInvoicesPage() {
     formData.discountType === 'percent'
       ? subtotal * (Number(formData.discountAmount) / 100)
       : Number(formData.discountAmount) || 0;
-  const afterDiscount = subtotal - discount;
+
+  const afterDiscount = Math.max(subtotal - discount, 0);
+
   const vatAmount =
     formData.vatType === 'exclusive'
       ? 0

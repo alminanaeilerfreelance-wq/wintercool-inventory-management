@@ -284,7 +284,7 @@ export default function ServicesReportPage() {
                     <TableRow>
                       <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Invoice No</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                    
                       <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Qty</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
@@ -305,7 +305,7 @@ export default function ServicesReportPage() {
                           <TableRow key={row._id || row.id || i} sx={{ bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50' }}>
                             <TableCell>{row.invoiceDate || row.date ? dayjs(row.invoiceDate || row.date).format('MMM DD, YYYY') : '—'}</TableCell>
                             <TableCell>{row.invoiceNo || row.invoice_no || '—'}</TableCell>
-                            <TableCell>{row.customer?.name || row.customerName || '—'}</TableCell>
+                           
                             <TableCell>{row.service?.name || row.serviceName || '—'}</TableCell>
                             <TableCell>{row.qty || '—'}</TableCell>
                             <TableCell>{fmt(row.price || row.unitPrice)}</TableCell>

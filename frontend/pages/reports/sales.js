@@ -195,6 +195,7 @@ export default function SalesReportPage() {
           ) : null}
         />
 
+        
         {/* Filter Bar */}
         <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2} alignItems="center">
@@ -301,62 +302,114 @@ export default function SalesReportPage() {
               <Divider />
 
               <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Invoice No</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Qty</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Subtotal</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {reportData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                          <Typography variant="body2" color="text.secondary">No data found</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      <>
-                        {reportData.map((row, i) => (
-                          <TableRow key={row._id || row.id || i} sx={{ bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50' }}>
-                            <TableCell>{getRowDate(row) ? dayjs(getRowDate(row)).format('MMM DD, YYYY') : '—'}</TableCell>
-                            <TableCell>{getRowInvoiceNo(row)}</TableCell>
-                            <TableCell>{getRowCustomer(row)}</TableCell>
-                            <TableCell>{getRowBranch(row)}</TableCell>
-                            <TableCell>{fmt(getRowQty(row))}</TableCell>
-                            <TableCell>{fmt(getRowPrice(row))}</TableCell>
-                            <TableCell>{fmt(getRowSubtotal(row))}</TableCell>
-                            <TableCell>{fmt(getRowTotal(row))}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={getRowStatus(row)}
-                                size="small"
-                                color={STATUS_COLORS[getRowStatus(row)] || 'default'}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {/* Totals Row */}
-                        <TableRow sx={{ bgcolor: 'grey.200' }}>
-                          <TableCell colSpan={4} sx={{ fontWeight: 700 }}>TOTALS</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{fmt(totals.qty)}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>—</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{fmt(totals.subtotal)}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{fmt(totals.total)}</TableCell>
-                          <TableCell />
-                        </TableRow>
-                      </>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+  <Table size="small">
+    <TableHead>
+      <TableRow>
+        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+        <TableCell sx={{ fontWeight: 700 }}>Invoice No</TableCell>
+
+        <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700 }}>Qty</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700 }}>Price</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700 }}>Subtotal</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700 }}>Total</TableCell>
+        <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+      </TableRow>
+    </TableHead>
+
+    <TableBody>
+      {reportData.length === 0 ? (
+        <TableRow>
+          <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              No data found
+            </Typography>
+          </TableCell>
+        </TableRow>
+      ) : (
+        <>
+          {reportData.map((row, i) => (
+            <TableRow
+              key={row._id || row.id || i}
+              sx={{
+                bgcolor: i % 2 === 0 ? 'background.paper' : 'grey.50',
+              }}
+            >
+              {/* DATE */}
+              <TableCell>
+                {getRowDate(row)
+                  ? dayjs(getRowDate(row)).format('MMM DD, YYYY')
+                  : '—'}
+              </TableCell>
+
+              {/* INVOICE NO */}
+              <TableCell>{getRowInvoiceNo(row)}</TableCell>
+
+        
+
+              {/* BRANCH */}
+              <TableCell>{getRowBranch(row)}</TableCell>
+
+              {/* QTY */}
+              <TableCell align="right">
+                {fmt(getRowQty(row))}
+              </TableCell>
+
+              {/* PRICE */}
+              <TableCell align="right">
+                ₱{fmt(getRowPrice(row))}
+              </TableCell>
+
+              {/* SUBTOTAL */}
+              <TableCell align="right">
+                ₱{fmt(getRowSubtotal(row))}
+              </TableCell>
+
+              {/* TOTAL */}
+              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                ₱{fmt(getRowTotal(row))}
+              </TableCell>
+
+              {/* STATUS */}
+              <TableCell>
+                <Chip
+                  label={getRowStatus(row)}
+                  size="small"
+                  color={
+                    STATUS_COLORS[getRowStatus(row)] || 'default'
+                  }
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+
+          {/* TOTALS ROW */}
+          <TableRow sx={{ bgcolor: 'grey.200' }}>
+            <TableCell colSpan={4} sx={{ fontWeight: 700 }}>
+              TOTALS
+            </TableCell>
+
+            <TableCell align="right" sx={{ fontWeight: 700 }}>
+              {fmt(totals.qty)}
+            </TableCell>
+
+            <TableCell />
+
+            <TableCell align="right" sx={{ fontWeight: 700 }}>
+              ₱{fmt(totals.subtotal)}
+            </TableCell>
+
+            <TableCell align="right" sx={{ fontWeight: 700 }}>
+              ₱{fmt(totals.total)}
+            </TableCell>
+
+            <TableCell />
+          </TableRow>
+        </>
+      )}
+    </TableBody>
+  </Table>
+</TableContainer>
             </Paper>
 
             {/* Hidden Print Area */}

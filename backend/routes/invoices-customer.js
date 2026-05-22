@@ -44,7 +44,7 @@ router.get('/', protect, async (req, res) => {
 
     const skip = (page - 1) * limit;
     const invoices = await InvoiceCustomer.find(query)
-.populate('customer', 'name contact')
+      .populate('customer', 'name contact')
       .populate('employee', 'name position')
       .populate('storeBranch', 'name')
       .poputalte('storeCotact', 'name')

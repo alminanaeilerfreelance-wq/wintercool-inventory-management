@@ -1,230 +1,218 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import {
-  Box,
-  Typography,
-  Avatar,
-  Paper,
-  IconButton,
-  Badge,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Divider,
-  Skeleton
-} from '@mui/material';
-import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import DownloadIcon from '@mui/icons-material/Download';
-
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
+import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
 import ReplyIcon from '@mui/icons-material/Reply';
-import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import { useSettings } from '../../context/SettingsContext';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
+import DoneIcon from '@mui/icons-material/Done';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import dayjs from 'dayjs';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
+
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+
+const formatTime = (date) => dayjs(date).format('HH:mm');
+
+const formatDateLabel = (date) => {
+  const d = dayjs(date);
+  if (d.isToday()) return 'Today';
+  if (d.isYesterday()) return 'Yesterday';
+  return d.format('MMM DD, YYYY');
+};
 
 const MessageList = ({
   messages = [],
   currentUserId,
   usersOnline = new Set(),
-  onImageLoad,
   hasMore,
   isLoadingMore,
   onLoadMore,
   onReplyTo,
-  onReact
 }) => {
   const messagesEndRef = useRef(null);
-  const rootRef = useRef(null);
-  const { settings } = useSettings();
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
 
-  const isOwnMessage = (message) => message.sender._id === currentUserId;
-  const isRead = (message) => message.readBy?.some(r => r.user._id === currentUserId);
-  const isOnline = (userId) => usersOnline.has(userId);
+  const isOwn = (msg) => {
+    const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+    return senderId === currentUserId;
+  };
 
-  const formatTime = (date) => new Date(date).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const isRead = (msg) => msg.readBy?.some((r) => {
+    const uid = typeof r.user === 'object' ? r.user._id : r.user;
+    return uid === currentUserId;
   });
 
-  const handleReply = (message) => {
-    onReplyTo?.(message);
-  };
+  // Group messages by date
+  const grouped = [];
+  let lastDate = null;
+  for (const msg of messages) {
+    const dateLabel = formatDateLabel(msg.createdAt);
+    if (dateLabel !== lastDate) {
+      grouped.push({ type: 'date', label: dateLabel });
+      lastDate = dateLabel;
+    }
+    grouped.push({ type: 'message', msg });
+  }
 
-  const handleReact = (message, reaction) => {
-    onReact?.(message, reaction);
-  };
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        flex: 1,
+        overflowY: 'auto',
+        px: 2,
+        py: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.5,
+        bgcolor: '#f0f2f5',
+        minHeight: 0,
+      }}
+    >
+      {/* Load more */}
+      {isLoadingMore && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+          <CircularProgress size={20} />
+        </Box>
+      )}
+      {hasMore && !isLoadingMore && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', pb: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+            onClick={onLoadMore}
+          >
+            Load older messages
+          </Typography>
+        </Box>
+      )}
 
-  const MessageBubble = ({ message, isOwn, isRead }) => {
-    const isMedia = message.type === 'image' || message.type === 'file' || message.type === 'audio';
-    
-    return (
-      <ListItem
-        disablePadding
-        sx={{
-          my: 0.5,
-          px: 2,
-          '&:hover': { bgcolor: 'action.hover' }
-        }}
-      >
-        <Box sx={{ width: '100%' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: isOwn ? 'flex-end' : 'flex-start',
-            mb: 0.5
-          }}>
-              <Paper
-              elevation={isOwn ? 2 : 1}
-              sx={{
-                maxWidth: '75%',
-                p: 1.5,
-                borderRadius: 3,
-                bgcolor: isOwn ? 'primary.main' : 'background.paper',
-                color: isOwn ? 'common.white' : 'text.primary',
-                position: 'relative',
-                ...(message.replyTo && {
-                  borderLeft: `4px solid ${alpha('primary.main', 0.3)}`,
-                  pl: 2.5
-                })
-              }}
-            >
-              {message.replyTo && (
-                <Box sx={{ 
-                  mb: 1, 
-                  p: 1, 
-                  bgcolor: alpha('primary.100', 0.3), 
-                  borderRadius: 2, 
-                  fontSize: '0.8rem'
-                }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Replying to {message.replyTo.sender?.name}
+      {messages.length === 0 && (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5, gap: 1 }}>
+          <ChatBubbleOutlineIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+          <Typography variant="body2" color="text.disabled">No messages yet. Say hi!</Typography>
+        </Box>
+      )}
+
+      {grouped.map((item, idx) => {
+        if (item.type === 'date') {
+          return (
+            <Box key={`date-${idx}`} sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1 }}>
+              <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+              <Typography variant="caption" color="text.secondary" sx={{ px: 1, bgcolor: '#f0f2f5', fontSize: '0.7rem', fontWeight: 600 }}>
+                {item.label}
+              </Typography>
+              <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+            </Box>
+          );
+        }
+
+        const { msg } = item;
+        const own = isOwn(msg);
+        const read = isRead(msg);
+        const senderName = typeof msg.sender === 'object' ? msg.sender?.name : '';
+
+        return (
+          <Box
+            key={msg._id || idx}
+            sx={{
+              display: 'flex',
+              flexDirection: own ? 'row-reverse' : 'row',
+              alignItems: 'flex-end',
+              gap: 1,
+              '&:hover .msg-actions': { opacity: 1 },
+            }}
+          >
+            {/* Avatar for others */}
+            {!own && (
+              <Avatar sx={{ width: 32, height: 32, fontSize: '0.8rem', flexShrink: 0, mb: 0.5 }}>
+                {senderName?.[0]?.toUpperCase() || '?'}
+              </Avatar>
+            )}
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: own ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
+              {/* Sender name for group */}
+              {!own && senderName && (
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, mb: 0.25, fontWeight: 600 }}>
+                  {senderName}
+                </Typography>
+              )}
+
+              {/* Reply preview */}
+              {msg.replyTo && (
+                <Box
+                  sx={{
+                    mb: 0.5,
+                    px: 1.5,
+                    py: 0.75,
+                    bgcolor: own ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.06)',
+                    borderRadius: '12px 12px 0 0',
+                    borderLeft: '3px solid',
+                    borderLeftColor: own ? 'rgba(255,255,255,0.6)' : 'primary.main',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: own ? 'rgba(255,255,255,0.8)' : 'primary.main', display: 'block' }}>
+                    {msg.replyTo.sender?.name || 'Someone'}
                   </Typography>
-                  <Typography sx={{ mt: 0.25, lineHeight: 1.3 }}>
-                    {message.replyTo.content?.substring(0, 50)}{message.replyTo.content?.length > 50 ? '...' : ''}
+                  <Typography variant="caption" sx={{ color: own ? 'rgba(255,255,255,0.7)' : 'text.secondary', display: 'block' }} noWrap>
+                    {msg.replyTo.content}
                   </Typography>
                 </Box>
               )}
-              {isMedia ? (
-                message.type === 'image' ? (
-                  <Box
-                    component="img"
-                    src={message.file.url}
-                    alt="Sent image"
-                    sx={{
-                      width: 200,
-                      height: 200,
-                      objectFit: 'cover',
-                      borderRadius: 2,
-                      cursor: 'pointer'
-                    }}
-                    onLoad={onImageLoad}
-                  />
-                ) : message.type === 'audio' ? (
-                  <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
-                    <IconButton size="large">
-                      <PlayArrowIcon />
-                    </IconButton>
-                    <Typography variant="caption" display="block">
-                      Audio message
-                    </Typography>
-                    <IconButton size="small">
-                      <DownloadIcon />
-                    </IconButton>
-                  </Paper>
-                ) : (
-                  <Paper sx={{ p: 1.5, textAlign: 'center' }}>
-                    <VolumeUpIcon sx={{ fontSize: 40 }} />
-                    <Typography variant="body2">
-                      {message.file.originalName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {Math.round(message.file.size / 1024)} KB
-                    </Typography>
-                  </Paper>
-                )
-              ) : (
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>
-                  {message.content}
-                </Typography>
-              )}
-              
-              <Box sx={{ 
-                position: 'absolute', 
-                bottom: 4, 
-                right: isOwn ? 8 : 8,
-                left: isOwn ? 'auto' : 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                fontSize: '0.75rem'
-              }}>
-                <Typography>{formatTime(message.createdAt)}</Typography>
-                {isOwn && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5 }}>
-                    <CheckCircleOutlineIcon 
-                      fontSize="small" 
-                      sx={{ 
-                        fontSize: '0.85rem',
-                        color: isRead ? 'success.light' : 'grey.400'
-                      }} 
-                    />
-                  </Box>
-                )}
-              </Box>
-            </Paper>
-          </Box>
 
-          {!isOwn && (
-            <ListItemAvatar sx={{ minWidth: 48, alignSelf: 'flex-end' }}>
-              <Badge
-                overlap="circular"
-                variant="dot"
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                color={isOnline(message.sender._id) ? "success" : "default"}
-              >
-                <Avatar 
-                  sx={{ width: 36, height: 36 }}
-                  src={message.sender.avatar}
+              <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, flexDirection: own ? 'row-reverse' : 'row' }}>
+                {/* Bubble */}
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    bgcolor: own ? 'primary.main' : 'white',
+                    color: own ? 'white' : 'text.primary',
+                    borderRadius: own ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                    wordBreak: 'break-word',
+                    position: 'relative',
+                  }}
                 >
-                  {message.sender.name?.charAt(0)?.toUpperCase()}
-                </Avatar>
-              </Badge>
-            </ListItemAvatar>
-          )}
-        </Box>
-      </ListItem>
-    );
+                  <Typography variant="body2" sx={{ lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                    {msg.content}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, mt: 0.25, justifyContent: 'flex-end' }}>
+                    <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7 }}>
+                      {formatTime(msg.createdAt)}
+                    </Typography>
+                    {own && (
+                      read
+                        ? <DoneAllIcon sx={{ fontSize: '0.75rem', color: own ? 'rgba(255,255,255,0.8)' : 'info.main' }} />
+                        : <DoneIcon sx={{ fontSize: '0.75rem', opacity: 0.6 }} />
+                    )}
+                  </Box>
+                </Box>
 
-  };
+                {/* Action: reply */}
+                <Box className="msg-actions" sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
+                  <Tooltip title="Reply">
+                    <IconButton size="small" onClick={() => onReplyTo?.(msg)} sx={{ width: 24, height: 24 }}>
+                      <ReplyIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        );
+      })}
 
-  return (
-    <Box ref={rootRef} sx={{ 
-      flex: 1, 
-      overflow: 'auto',
-      bgcolor: 'grey.50',
-      py: 2
-    }}>
-      {isLoadingMore && (
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Skeleton />
-        </Box>
-      )}
-      {messages.map((message) => (
-        <MessageBubble
-          key={message._id}
-          message={message}
-          isOwn={isOwnMessage(message)}
-          isRead={isRead(message)}
-        />
-      ))}
       <div ref={messagesEndRef} />
     </Box>
   );
