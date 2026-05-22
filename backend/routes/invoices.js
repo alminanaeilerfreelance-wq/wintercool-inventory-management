@@ -38,12 +38,13 @@ const calculateTotals = (subtotal, discount = 0, discountType = 'fixed', vatType
   let total = afterDiscount;
 
   if (vatType === 'exclusive') {
-    vatAmount = (afterDiscount * vatRate) / 100;
-    total = afterDiscount + vatAmount;
-  } else if (vatType === 'inclusive') {
-    // VAT is already inside the afterDiscount amount
-    vatAmount = afterDiscount - afterDiscount / (1 + vatRate / 100);
+    // Exclusive: VAT is NOT included, set vatAmount to 0
+    vatAmount = 0;
     total = afterDiscount;
+  } else if (vatType === 'inclusive') {
+    // Inclusive: VAT is included in the total
+    vatAmount = afterDiscount - afterDiscount / (1 + vatRate / 100);
+    total = afterDiscount + vatAmount;
   }
 
   return {
@@ -174,6 +175,20 @@ router.get('/:id', protect, async (req, res) => {
     const invoice = await Invoice.findById(req.params.id).populate(populateOptions);
     if (!invoice) return res.status(404).json({ message: 'Not found' });
 
+    // Recalculate VAT to ensure it's correct for display
+    const { vatAmount, total } = calculateTotals(
+      invoice.subtotal,
+      invoice.discount,
+      invoice.discountType,
+      invoice.vatType,
+      (invoice.vatRate || 12) / 100
+    );
+
+    // Update invoice object with recalculated values
+    const invoiceObj = invoice.toObject();
+    invoiceObj.vatAmount = vatAmount;
+    invoiceObj.total = total;
+
     let qrCode = invoice.qrCode;
     if (!qrCode) {
       const qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoices/${invoice._id}`;
@@ -181,7 +196,8 @@ router.get('/:id', protect, async (req, res) => {
       await Invoice.findByIdAndUpdate(invoice._id, { qrCode });
     }
 
-    res.json({ ...invoice.toObject(), qrCode });
+    invoiceObj.qrCode = qrCode;
+    res.json(invoiceObj);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

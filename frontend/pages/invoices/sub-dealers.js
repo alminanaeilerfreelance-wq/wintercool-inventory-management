@@ -309,14 +309,10 @@ export default function SubDealerInvoicesPage() {
   const vatAmount =
     formData.vatType === 'exclusive'
       ? 0
-      : formData.vatType === 'inclusive'
-      ? (afterDiscount * vatRate) / 100
-      : 0;
+      : afterDiscount - afterDiscount / (1 + vatRate);
 
   const grandTotal =
-    formData.vatType === 'exclusive'
-      ? afterDiscount
-      : afterDiscount + vatAmount;
+    formData.vatType === 'exclusive' ? afterDiscount : afterDiscount + vatAmount;
 
 
   const handleFormSubmit = async () => {

@@ -282,10 +282,12 @@ const InvoicePrint = forwardRef(function InvoicePrint({ invoice, company, qrValu
                   </Typography>
                 </Stack>
               )}
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" sx={{ fontSize: 12 }}>VAT</Typography>
-                <Typography variant="body2" sx={{ fontSize: 12 }}>{fmt(invoice.vatAmount)}</Typography>
-              </Stack>
+              {invoice.vatAmount > 0 && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" sx={{ fontSize: 12 }}>VAT</Typography>
+                  <Typography variant="body2" sx={{ fontSize: 12 }}>{fmt(invoice.vatAmount)}</Typography>
+                </Stack>
+              )}
               <Divider />
               <Stack direction="row" justifyContent="space-between">
                 <Typography variant="subtitle1" fontWeight={700} sx={{ fontSize: 14 }}>Grand Total</Typography>

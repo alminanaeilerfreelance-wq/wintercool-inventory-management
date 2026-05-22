@@ -385,7 +385,7 @@ const discount =
     formData.vatType === 'exclusive'
       ? 0
       : afterDiscount - afterDiscount / (1 + vatRate);
-  const grandTotal =
+    const grandTotal =
     formData.vatType === 'exclusive' ? afterDiscount : afterDiscount + vatAmount;
 
 
@@ -477,12 +477,18 @@ const discount =
   };
 
   const handleViewInvoice = async (row) => {
-    setViewInvoice(row);
-    setViewOpen(true);
     try {
-      const res = await getInvoiceQR(row._id || row.id);
-      setViewQR(res.data?.qr || res.data?.data || '');
-    } catch {
+      // Fetch fresh invoice data from backend to get recalculated VAT
+      const invoiceRes = await api.get(`/invoices/${row._id || row.id}`);
+      const freshInvoice = invoiceRes.data?.data || invoiceRes.data;
+      setViewInvoice(freshInvoice);
+      setViewOpen(true);
+      
+      // Get QR code
+      const qrRes = await getInvoiceQR(row._id || row.id);
+      setViewQR(qrRes.data?.qr || qrRes.data?.data || '');
+    } catch (err) {
+      console.error('Error loading invoice details:', err);
       setViewQR('');
     }
   };
