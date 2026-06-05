@@ -73,13 +73,10 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      const formData = new FormData();
-      Object.entries(form).forEach(([k, v]) => {
-        if (k !== 'confirmPassword') formData.append(k, v);
-      });
-      if (avatar) formData.append('avatar', avatar);
+      const { confirmPassword, ...payload } = form;
+      if (avatar && avatarPreview) payload.image = avatarPreview;
 
-      await signup(formData);
+      await signup(payload);
       setSuccess('Account created successfully! Redirecting to login…');
       setTimeout(() => router.push('/login'), 1500);
     } catch (err) {

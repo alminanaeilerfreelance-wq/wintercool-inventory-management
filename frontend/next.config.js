@@ -3,12 +3,12 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === 'production'
     ? 'https://wintercool-k2o8.onrender.com/api'
-    : 'http://localhost:5000/api');
+    : 'http://localhost:5001/api');
 
 const nextConfig = {
   output: 'standalone',
   env: {
-    // Local dev default (backend runs on :5000). Production can override via env.
+    // Local dev default (backend runs on :5001). Production can override via env.
     NEXT_PUBLIC_API_URL: API_URL,
   },
   images: {

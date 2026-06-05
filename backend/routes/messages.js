@@ -197,18 +197,50 @@ router.get('/users', protect, async (req, res) => {
   }
 });
 
-// UPLOAD file for messages
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const messageUploadsDir = path.join(__dirname, '..', 'uploads', 'messages');
+if (!fs.existsSync(messageUploadsDir)) {
+  fs.mkdirSync(messageUploadsDir, { recursive: true });
+}
+
+const allowedUploadTypes = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'image/webp': ['.webp'],
+  'video/mp4': ['.mp4'],
+  'video/webm': ['.webm'],
+  'audio/ogg': ['.ogg'],
+  'audio/mpeg': ['.mp3'],
+  'audio/wav': ['.wav'],
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+};
+
 const upload = multer({
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, messageUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeName = `message-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+      cb(null, safeName);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|webm|ogg|mp3|wav|pdf|doc|docx/;
-    if (allowedTypes.test(file.mimetype)) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const validExtensions = allowedUploadTypes[file.mimetype];
+
+    if (validExtensions && validExtensions.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error('Invalid file type'), false);
     }
-  }
+  },
 });
 
 router.post('/upload', protect, upload.single('file'), async (req, res) => {
@@ -223,7 +255,7 @@ router.post('/upload', protect, upload.single('file'), async (req, res) => {
       mimetype: req.file.mimetype,
       size: req.file.size,
       path: req.file.path,
-      url: `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+      url: `${req.protocol}://${req.get('host')}/uploads/messages/${req.file.filename}`,
     };
 
     res.json({ file });
@@ -302,4 +334,3 @@ router.post('/broadcast', protect, async (req, res) => {
 });
 
 module.exports = router;
-

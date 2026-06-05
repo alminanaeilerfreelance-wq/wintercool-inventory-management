@@ -445,53 +445,6 @@ router.get('/export/:type', protect, async (req, res) => {
       sheetName = 'SubDealerInvoices';
 
     } else if (type === 'supplier') {
-      if (branch) matchStage.storeBranch = require('mongoose').Types.ObjectId.createFromHexString(branch);
-      if (status) {
-        const statusRegex = new RegExp(`^${status}$`, 'i');
-        matchStage.$or = [{ paymentStatus: statusRegex }, { status: statusRegex }];
-      }
-
-      let rawItems = await Invoice.find(matchStage)
-        .populate('customer', 'name email')
-        .populate('employee', 'firstName lastName')
-        .populate('storeBranch', 'name')
-        .sort({ createdAt: -1 })
-        .lean();
-
-      items = rawItems.map((inv) => ({
-        InvoiceNo: inv.invoiceNo,
-        Date: new Date(inv.createdAt).toLocaleDateString(),
-        Customer: inv.customer?.name || '',
-        Employee: inv.employee ? `${inv.employee.firstName} ${inv.employee.lastName}` : '',
-        Branch: inv.storeBranch?.name || '',
-        Subtotal: inv.subtotal || 0,
-        Discount: inv.discount || 0,
-        VAT: inv.vatAmount || 0,
-        Total: inv.total || 0,
-        Status: inv.paymentStatus || inv.status || '',
-      }));
-
-      if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        const numericSearch = Number(search);
-        items = items.filter((item) => {
-          return [
-            String(item.InvoiceNo || ''),
-            String(item.Customer || ''),
-            String(item.Employee || ''),
-            String(item.Branch || ''),
-            String(item.Status || ''),
-          ].some((value) => searchRegex.test(value))
-            || (!Number.isNaN(numericSearch) && (
-              Number(item.Subtotal) === numericSearch ||
-              Number(item.Total) === numericSearch ||
-              Number(item.VAT) === numericSearch
-            ));
-        });
-      }
-
-      sheetName = type === 'sales' ? 'Sales' : 'Services';
-    } else if (type === 'supplier') {
       const matchStage = { ...buildDateMatch(dateFrom, dateTo) };
       if (supplier) matchStage.supplier = require('mongoose').Types.ObjectId.createFromHexString(supplier);
       if (status) {
@@ -717,4 +670,3 @@ router.get('/sub-dealer-invoices', protect, async (req, res) => {
 });
 
 module.exports = router;
-

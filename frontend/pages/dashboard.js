@@ -139,7 +139,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [noBranch, setNoBranch] = useState(false);
   const [branchInfo, setBranchInfo] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(null);
   const [notifBadge, setNotifBadge] = useState(0);
   const [upcomingCalendarAlerts, setUpcomingCalendarAlerts] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
@@ -198,7 +198,7 @@ export default function DashboardPage() {
   };
 
   const fetchCustomerInvoices = useCallback(async () => {
-    if (!isAdmin) return;
+    if (isAdmin !== true) return;
     setCustomerInvoicesLoading(true);
     try {
       const params = new URLSearchParams({
@@ -224,7 +224,7 @@ export default function DashboardPage() {
   }, [isAdmin, customerInvoicesPage, customerInvoicesRowsPerPage, installerFilter]);
 
   const fetchServiceInvoices = useCallback(async () => {
-    if (!isAdmin) return;
+    if (isAdmin !== true) return;
     setServiceInvoicesLoading(true);
     try {
       const params = new URLSearchParams({
@@ -250,13 +250,80 @@ export default function DashboardPage() {
   }, [isAdmin, serviceInvoicesPage, serviceInvoicesRowsPerPage, serviceInstallerFilter]);
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchSupplementalData = async () => {
+      const startDate = dayjs().startOf('day');
+      const endDate = startDate.add(30, 'day');
+
+      const [notifResult, calendarResult, lowStockResult] = await Promise.allSettled([
+        getNotifications(),
+        api.get('/calendar', {
+          params: {
+            start: startDate.toISOString(),
+            end: endDate.toISOString(),
+          },
+          timeout: 10000,
+        }),
+        api.get('/inventory/low-stock', { timeout: 10000 }),
+      ]);
+
+      if (!mounted) return;
+
+      let notifItems = [];
+      if (notifResult.status === 'fulfilled') {
+        const notifData = notifResult.value.data.data || notifResult.value.data;
+        notifItems = Array.isArray(notifData) ? notifData : notifData.items || [];
+      } else {
+        console.error('Notifications fetch error:', notifResult.reason);
+      }
+
+      let upcoming = [];
+      if (calendarResult.status === 'fulfilled') {
+        const calData = calendarResult.value.data?.data || calendarResult.value.data;
+        const calItems = Array.isArray(calData) ? calData : calData.items || [];
+
+        upcoming = (calItems || [])
+          .filter((ev) => {
+            if (!ev || (!ev.startDate && !ev.start)) return false;
+            const start = dayjs(ev.startDate || ev.start);
+            if (!start.isValid()) return false;
+            const startDay = start.startOf('day');
+            return startDay.diff(startDate, 'day') >= 0 && startDay.diff(endDate, 'day') <= 0;
+          })
+          .sort((a, b) => {
+            const aStart = dayjs(a.startDate || a.start);
+            const bStart = dayjs(b.startDate || b.start);
+            return aStart.diff(bStart);
+          })
+          .slice(0, 5);
+      } else {
+        console.error('Calendar fetch error:', calendarResult.reason);
+      }
+
+      setUpcomingCalendarAlerts(upcoming);
+
+      const calendarNotifications = upcoming.map((ev) => ({
+        id: ev._id || ev.id,
+        type: 'calendar',
+        message: `Upcoming: ${ev.title} on ${dayjs(ev.startDate || ev.start).format('MMM DD')}`,
+        createdAt: ev.startDate || ev.start || new Date().toISOString(),
+        read: false,
+      }));
+
+      setNotifications([...calendarNotifications, ...notifItems]);
+      setNotifBadge(calendarNotifications.length + notifItems.filter((n) => !n.read).length);
+
+      if (lowStockResult.status === 'fulfilled') {
+        const lsData = lowStockResult.value.data?.items || lowStockResult.value.data?.data || lowStockResult.value.data || [];
+        setLowStockItems(Array.isArray(lsData) ? lsData : []);
+      }
+    };
+
     const fetchData = async () => {
       try {
-        const [dashRes, notifRes] = await Promise.all([
-          getDashboard(),
-          getNotifications(),
-        ]);
-
+        const dashRes = await getDashboard();
+        if (!mounted) return;
         const dashData = dashRes.data.data || dashRes.data;
 
         // Handle no-branch case for regular users
@@ -292,70 +359,22 @@ export default function DashboardPage() {
           setTopProducts(dashData.topProducts);
         }
 
-        const notifData = notifRes.data.data || notifRes.data;
-        const notifItems = Array.isArray(notifData) ? notifData : notifData.items || [];
-
-        let calendarNotifications = [];
-        try {
-          const startDate = dayjs().startOf('day');
-          const endDate = startDate.add(30, 'day');
-          const calRes = await api.get('/calendar', {
-            params: {
-              start: startDate.toISOString(),
-              end: endDate.toISOString(),
-            },
-          });
-          const calData = calRes.data?.data || calRes.data;
-          const calItems = Array.isArray(calData) ? calData : calData.items || [];
-
-          const upcoming = (calItems || [])
-            .filter((ev) => {
-              if (!ev || (!ev.startDate && !ev.start)) return false;
-              const start = dayjs(ev.startDate || ev.start);
-              if (!start.isValid()) return false;
-              const startDay = start.startOf('day');
-              return startDay.diff(startDate, 'day') >= 0 && startDay.diff(endDate, 'day') <= 0;
-            })
-            .sort((a, b) => {
-              const aStart = dayjs(a.startDate || a.start);
-              const bStart = dayjs(b.startDate || b.start);
-              return aStart.diff(bStart);
-            })
-            .slice(0, 5);
-          setUpcomingCalendarAlerts(upcoming);
-
-          calendarNotifications = upcoming.map((ev) => ({
-            id: ev._id || ev.id,
-            type: 'calendar',
-            message: `Upcoming: ${ev.title} on ${dayjs(ev.startDate || ev.start).format('MMM DD')}`,
-            createdAt: ev.startDate || ev.start || new Date().toISOString(),
-            read: false,
-          }));
-        } catch (calError) {
-          console.error('Calendar fetch error:', calError);
-          setUpcomingCalendarAlerts([]);
-        }
-
-        setNotifications([...calendarNotifications, ...notifItems]);
-        setNotifBadge(calendarNotifications.length + notifItems.filter((n) => !n.read).length);
-
-        // Fetch low stock items for alert panel
-        try {
-          const lsRes = await api.get('/inventory/low-stock');
-          const lsData = lsRes.data?.items || lsRes.data?.data || lsRes.data || [];
-          setLowStockItems(Array.isArray(lsData) ? lsData : []);
-        } catch { /* silent */ }
+        setLoading(false);
+        fetchSupplementalData();
       } catch (err) {
         console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
     fetchData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const fetchPurchaseOrders = useCallback(async () => {
-    if (!isAdmin) return;
+    if (isAdmin !== true) return;
     setPurchaseOrdersLoading(true);
     try {
       const params = new URLSearchParams({

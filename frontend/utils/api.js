@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const DEFAULT_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 20000;
+const AUTH_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AUTH_TIMEOUT_MS) || 4000;
+const DASHBOARD_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_DASHBOARD_TIMEOUT_MS) || 7000;
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
+  timeout: DEFAULT_API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,10 +46,10 @@ api.interceptors.response.use(
 export default api;
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
-export const login = (data) => api.post('/auth/login', data);
+export const login = (data) => api.post('/auth/login', data, { timeout: AUTH_API_TIMEOUT_MS });
 export const register = (data) => api.post('/auth/register', data);
-export const getMe = () => api.get('/auth/me');
-export const googleLogin = (credential) => api.post('/auth/google', { credential });
+export const getMe = () => api.get('/auth/me', { timeout: AUTH_API_TIMEOUT_MS });
+export const googleLogin = (credential) => api.post('/auth/google', { credential }, { timeout: AUTH_API_TIMEOUT_MS });
 
 // ─── Generic CRUD factory ────────────────────────────────────────────────────
 export const getCRUD = (resource) => ({
@@ -56,8 +61,8 @@ export const getCRUD = (resource) => ({
 });
 
 // ─── Dashboard & Notifications ───────────────────────────────────────────────
-export const getDashboard = () => api.get('/dashboard');
-export const getNotifications = () => api.get('/notifications');
+export const getDashboard = () => api.get('/dashboard', { timeout: DASHBOARD_API_TIMEOUT_MS });
+export const getNotifications = () => api.get('/notifications', { timeout: DASHBOARD_API_TIMEOUT_MS });
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
 export const getInventory = (params) => api.get('/inventory', { params });

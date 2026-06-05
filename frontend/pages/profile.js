@@ -46,17 +46,17 @@ function TabPanel({ children, value, index }) {
 }
 
 export default function ProfilePage() {
-  const { user, updateProfile: updateUserInContext } = useAuth();
+  const { user, setCurrentUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const fileRef = useRef(null);
 
   const [tab, setTab] = useState(0);
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || user?.photo || null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.image || user?.avatar || user?.photo || null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
+    name: user?.customerName || user?.name || '',
     email: user?.email || '',
     contact: user?.contact || user?.phone || '',
     address: user?.address || '',
@@ -96,17 +96,18 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const formData = new FormData();
-      formData.append('name', profileForm.name);
-      formData.append('email', profileForm.email);
-      formData.append('contact', profileForm.contact);
-      formData.append('address', profileForm.address);
-      if (avatarFile) formData.append('avatar', avatarFile);
+      const payload = {
+        customerName: profileForm.name,
+        email: profileForm.email,
+        contact: profileForm.contact,
+        address: profileForm.address,
+      };
+      if (avatarFile && avatarPreview) payload.image = avatarPreview;
 
-      const res = await updateProfile(formData);
-      if (updateUserInContext) {
+      const res = await updateProfile(payload);
+      if (setCurrentUser) {
         const updated = res.data.user || res.data;
-        updateUserInContext(updated);
+        setCurrentUser(updated);
       }
       enqueueSnackbar('Profile updated successfully', { variant: 'success' });
     } catch (err) {
@@ -141,8 +142,10 @@ export default function ProfilePage() {
     }
   };
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const displayName = user?.customerName || user?.name || user?.username || 'User';
+
+  const initials = displayName
+    ? displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
   return (
@@ -200,7 +203,7 @@ export default function ProfilePage() {
               />
             </Box>
 
-            <Typography variant="h6" fontWeight={700}>{user?.name || 'User'}</Typography>
+            <Typography variant="h6" fontWeight={700}>{displayName}</Typography>
             <Typography variant="body2" color="text.secondary" mb={1}>
               {user?.email || ''}
             </Typography>

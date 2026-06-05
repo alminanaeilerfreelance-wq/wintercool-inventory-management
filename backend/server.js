@@ -12,15 +12,45 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+server.requestTimeout = 120000;
+server.headersTimeout = 65000;
+server.timeout = 120000;
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'https://wintercool-inventory-management-fro.vercel.app',
+].filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+};
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+};
+
 // Socket.io setup
 const io = new Server(server, {
-  cors: { 
-    origin: [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'https://*.vercel.app'
-    ], 
-    methods: ['GET','POST'] 
+  cors: {
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET','POST'],
+    credentials: true,
   },
 });
 
@@ -28,29 +58,19 @@ const io = new Server(server, {
 // Make io accessible in routes via req.io
 app.use((req, res, next) => { req.io = io; next(); });
 
-// Security middleware (helmet, rate limit, mongo-sanitize, xss, hpp)
-applySecurityMiddleware(app);
+// Security middleware that does not need parsed request bodies.
+applySecurityMiddleware(app, { stage: 'preBody' });
 
-// CORS — allow frontend origin
-// app.use(cors({
-//   origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3000'],
-//   credentials: true,
-// }));
-// 
-// 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://wintercool-inventory-management-fro.vercel.app",
-    ],
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || '10mb';
+app.use(express.json({ limit: requestBodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: requestBodyLimit }));
+
+// Security middleware that must run after JSON/form body parsing.
+applySecurityMiddleware(app, { stage: 'postBody' });
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Routes ──────────────────────────────────────────────────────────────
