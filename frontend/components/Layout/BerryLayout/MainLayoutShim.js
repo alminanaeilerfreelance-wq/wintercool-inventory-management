@@ -199,7 +199,7 @@ export default function MainLayoutShim({ children }) {
       pageTitle={pageTitle}
       company={company}
       user={user}
-      roleLabel={roleLabel}f
+      roleLabel={roleLabel}
       unreadCount={unreadCount}
       messages={messages}
       navItems={navItems}
@@ -233,4 +233,3 @@ export default function MainLayoutShim({ children }) {
     </BerryLayout>
   );
 }
-

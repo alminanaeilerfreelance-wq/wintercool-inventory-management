@@ -22,6 +22,7 @@ export default function BerryHeader({
   user,
   roleLabel,
   unreadCount,
+  drawerOpen,
   onDrawerToggle,
   messageAnchor,
   onMessageOpen,
@@ -58,21 +59,24 @@ export default function BerryHeader({
         borderColor: 'divider',
       }}
     >
-      <IconButton
-        edge="start"
-        onClick={onDrawerToggle}
-        aria-label="Open navigation"
-        sx={{
-          color: 'text.secondary',
-          mr: 1,
-          borderRadius: 2.5,
-          p: 1.25,
-          '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.08)', color: 'primary.main' },
-          transition: 'all 0.2s ease-in-out',
-        }}
-      >
-        <MenuIcon sx={{ fontSize: 24 }} />
-      </IconButton>
+      <Tooltip title={drawerOpen ? 'Hide sidebar' : 'Show sidebar'} arrow>
+        <IconButton
+          edge="start"
+          onClick={onDrawerToggle}
+          aria-label={drawerOpen ? 'Hide navigation' : 'Show navigation'}
+          aria-expanded={Boolean(drawerOpen)}
+          sx={{
+            color: drawerOpen ? 'primary.main' : 'text.secondary',
+            mr: 1,
+            borderRadius: 2.5,
+            p: 1.25,
+            '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.08)', color: 'primary.main' },
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          <MenuIcon sx={{ fontSize: 24 }} />
+        </IconButton>
+      </Tooltip>
 
       <Box
         sx={{
@@ -413,4 +417,3 @@ export default function BerryHeader({
     </Toolbar>
   );
 }
-

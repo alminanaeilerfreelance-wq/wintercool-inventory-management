@@ -34,16 +34,24 @@ export default function BerryLayout({
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const activeDrawerWidth = !isMobile && drawerOpen ? drawerWidth : 0;
+  const drawerTransition = theme.transitions.create(['width', 'left'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.enteringScreen,
+  });
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       {/* drawer */}
       <Drawer
-        variant={isMobile ? 'temporary' : 'permanent'}
+        variant={isMobile ? 'temporary' : 'persistent'}
         open={drawerOpen}
+        onClose={onDrawerClose || onDrawerToggle}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          width: drawerWidth,
+          width: isMobile ? drawerWidth : activeDrawerWidth,
           flexShrink: 0,
+          transition: drawerTransition,
           '& .MuiDrawer-paper': {
             width: drawerWidth,
             boxSizing: 'border-box',
@@ -55,6 +63,7 @@ export default function BerryLayout({
             top: isMobile ? undefined : 0,
             height: isMobile ? undefined : '100vh',
             position: isMobile ? undefined : 'fixed',
+            transition: drawerTransition,
           },
         }}
       >
@@ -90,10 +99,11 @@ export default function BerryLayout({
           sx={{
             position: 'fixed',
             top: 0,
-            // Avoid covering the drawer: header starts after drawer width on desktop.
-            left: { md: drawerWidth, xs: 0 },
+            // Avoid covering the drawer: header follows open/closed drawer width on desktop.
+            left: { md: activeDrawerWidth, xs: 0 },
             right: 0,
             zIndex: 1200,
+            transition: drawerTransition,
           }}
         >
           <BerryHeader
@@ -102,6 +112,7 @@ export default function BerryLayout({
             user={user}
             roleLabel={roleLabel}
             unreadCount={unreadCount}
+            drawerOpen={drawerOpen}
             onDrawerToggle={onDrawerToggle}
             messageAnchor={messageAnchor}
             onMessageOpen={onNotificationsOpen}
@@ -122,4 +133,3 @@ export default function BerryLayout({
     </Box>
   );
 }
-
