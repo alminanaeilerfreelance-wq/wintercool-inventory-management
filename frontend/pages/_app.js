@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -13,6 +14,51 @@ import { SettingsProvider } from '../context/SettingsContext';
 import { PermissionsProvider } from '../context/PermissionsContext';
 
 const PUBLIC_ROUTES = ['/login', '/signup'];
+
+const isCancelledRouteChange = (error) => {
+  if (!error) return false;
+  return error.cancelled || String(error.message || '').includes('Abort fetching component');
+};
+
+const replaceRoute = (router, href) => {
+  if (router.asPath === href) return;
+
+  router.replace(href).catch((error) => {
+    if (!isCancelledRouteChange(error)) {
+      console.error(error);
+    }
+  });
+};
+
+const replaceDocument = (href) => {
+  if (typeof window === 'undefined') return false;
+  if (window.location.pathname === href) return true;
+
+  window.location.replace(href);
+  return true;
+};
+
+const unregisterLegacyServiceWorkers = () => {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => {
+      registrations.forEach((registration) => {
+        registration.unregister();
+      });
+    })
+    .catch(() => {});
+
+  if ('caches' in window) {
+    window.caches
+      .keys()
+      .then((cacheNames) => {
+        cacheNames.forEach((cacheName) => window.caches.delete(cacheName));
+      })
+      .catch(() => {});
+  }
+};
 
 // Suppress react-to-print's findDOMNode deprecation warning
 if (typeof window !== 'undefined') {
@@ -43,16 +89,22 @@ function AppContent({ Component, pageProps }) {
   const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
+    unregisterLegacyServiceWorkers();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && router.isReady) {
       const isPublic = PUBLIC_ROUTES.includes(router.pathname);
       if (!isAuthenticated && !isPublic) {
-        router.push('/login');
+        replaceRoute(router, '/login');
       }
       if (isAuthenticated && isPublic) {
-        router.push('/dashboard');
+        if (!replaceDocument('/dashboard')) {
+          replaceRoute(router, '/dashboard');
+        }
       }
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router.isReady, router.pathname, router]);
 
   if (loading) {
     return (
@@ -83,6 +135,10 @@ function AppContent({ Component, pageProps }) {
 export default function App({ Component, pageProps }) {
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+      <Head>
+        <title>WMS Pro</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </Head>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>

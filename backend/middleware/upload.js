@@ -2,6 +2,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const MAX_IMAGE_UPLOAD_BYTES = 500 * 1024 * 1024;
+
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -32,7 +34,7 @@ const multerOptions = {
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB limit
+    fileSize: MAX_IMAGE_UPLOAD_BYTES,
   },
 };
 
@@ -40,4 +42,4 @@ const uploadSingle = multer(multerOptions).single('image');
 
 const uploadMultiple = multer(multerOptions).array('images', 10);
 
-module.exports = { uploadSingle, uploadMultiple };
+module.exports = { MAX_IMAGE_UPLOAD_BYTES, uploadSingle, uploadMultiple };

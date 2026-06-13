@@ -11,7 +11,7 @@ import io from 'socket.io-client';
 import NewConversationDialog from '../components/Messenger/NewConversationDialog';
 import AddIcon from '@mui/icons-material/Add';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5001';
 
 function MessagesPage() {
@@ -377,4 +377,3 @@ function MessagesPage() {
 }
 
 export default MessagesPage;
-

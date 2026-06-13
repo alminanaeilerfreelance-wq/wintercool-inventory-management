@@ -6,6 +6,7 @@ const User = require('../models/User');
 const SecurityAlert = require('../models/SecurityAlert');
 const AuditLog = require('../models/AuditLog');
 const { protect } = require('../middleware/auth');
+const { MAX_IMAGE_UPLOAD_BYTES, uploadSingle } = require('../middleware/upload');
 const { sendEmail } = require('../utils/email');
 
 const router = express.Router();
@@ -37,6 +38,30 @@ const sanitizeUser = (user) => ({
   permissions: user.permissions || {},
 });
 
+const maxImageUploadMb = Math.round(MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024));
+
+const handleProfileImageUpload = (req, res, next) => {
+  uploadSingle(req, res, (err) => {
+    if (!err) {
+      next();
+      return;
+    }
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(413).json({ message: `Profile photo must be ${maxImageUploadMb}MB or smaller.` });
+      return;
+    }
+
+    res.status(400).json({ message: err.message || 'Profile photo upload failed.' });
+  });
+};
+
+const getUploadedFileUrl = (req, file) => {
+  if (!file) return '';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  return `${protocol}://${req.get('host')}/uploads/${file.filename}`;
+};
+
 // Helper — record a security alert
 async function recordAlert(ip, username, action, userAgent, req) {
   try {
@@ -65,9 +90,10 @@ async function isIpSuspicious(ip) {
 }
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', handleProfileImageUpload, async (req, res) => {
   try {
-    const { customerName, email, contact, address, username, password, image } = req.body;
+    const { customerName, email, contact, address, username, password } = req.body;
+    const image = req.file ? getUploadedFileUrl(req, req.file) : req.body.image;
     if (!username || !email || !password)
       return res.status(400).json({ message: 'Username, email, and password are required' });
     if (password.length < 6)

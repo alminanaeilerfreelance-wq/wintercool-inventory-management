@@ -5,11 +5,10 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
+    "dev": "sh -c 'npm --prefix backend run dev & npm --prefix frontend run dev; wait'",
     "build": "npm --prefix frontend run build",
     "start": "npm --prefix frontend run start",
     "backend": "npm --prefix backend run dev",
     "frontend": "npm --prefix frontend run dev"
   }
 }
-

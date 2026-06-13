@@ -3,9 +3,14 @@ import axios from 'axios';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS) || 20000;
 const AUTH_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AUTH_TIMEOUT_MS) || 4000;
 const DASHBOARD_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_DASHBOARD_TIMEOUT_MS) || 7000;
+const UPLOAD_API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_UPLOAD_TIMEOUT_MS) || 10 * 60 * 1000;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+const isFormDataPayload = (value) =>
+  typeof FormData !== 'undefined' && value instanceof FormData;
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api',
+  baseURL: API_BASE_URL,
   timeout: DEFAULT_API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
@@ -19,6 +24,14 @@ api.interceptors.request.use(
       const token = localStorage.getItem('wms_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    if (isFormDataPayload(config.data)) {
+      if (typeof config.headers?.delete === 'function') {
+        config.headers.delete('Content-Type');
+      } else if (config.headers) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
       }
     }
     return config;
@@ -47,7 +60,10 @@ export default api;
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const login = (data) => api.post('/auth/login', data, { timeout: AUTH_API_TIMEOUT_MS });
-export const register = (data) => api.post('/auth/register', data);
+export const register = (data) =>
+  api.post('/auth/register', data, {
+    timeout: isFormDataPayload(data) ? UPLOAD_API_TIMEOUT_MS : DEFAULT_API_TIMEOUT_MS,
+  });
 export const getMe = () => api.get('/auth/me', { timeout: AUTH_API_TIMEOUT_MS });
 export const googleLogin = (credential) => api.post('/auth/google', { credential }, { timeout: AUTH_API_TIMEOUT_MS });
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import NextLink from 'next/link';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,9 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
+const MAX_PROFILE_PHOTO_BYTES = 500 * 1024 * 1024;
+const MAX_PROFILE_PHOTO_MB = Math.round(MAX_PROFILE_PHOTO_BYTES / (1024 * 1024));
+
 export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
@@ -46,18 +49,37 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setAvatar(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setAvatarPreview(ev.target.result);
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file.');
+      e.target.value = '';
+      return;
     }
+
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+      setError(`Profile photo must be ${MAX_PROFILE_PHOTO_MB}MB or smaller.`);
+      e.target.value = '';
+      return;
+    }
+
+    setError('');
+    setAvatar(file);
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {
@@ -73,8 +95,13 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      const { confirmPassword, ...payload } = form;
-      if (avatar && avatarPreview) payload.image = avatarPreview;
+      const payload = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (key !== 'confirmPassword') {
+          payload.append(key, value);
+        }
+      });
+      if (avatar) payload.append('image', avatar);
 
       await signup(payload);
       setSuccess('Account created successfully! Redirecting to login…');
@@ -227,7 +254,7 @@ export default function SignupPage() {
                     Upload Photo
                   </Button>
                   <Typography variant="caption" display="block" color="text.secondary" mt={0.5}>
-                    Optional — JPG, PNG up to 2MB
+                    Optional — JPG, PNG, GIF, or WEBP up to {MAX_PROFILE_PHOTO_MB}MB
                   </Typography>
                   <input
                     ref={fileRef}

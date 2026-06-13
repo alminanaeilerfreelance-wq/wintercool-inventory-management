@@ -12,9 +12,11 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-server.requestTimeout = 120000;
+const requestTimeoutMs = Number(process.env.REQUEST_TIMEOUT_MS) || 10 * 60 * 1000;
+
+server.requestTimeout = requestTimeoutMs;
 server.headersTimeout = 65000;
-server.timeout = 120000;
+server.timeout = requestTimeoutMs;
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,

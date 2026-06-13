@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
 import NextLink from 'next/link';
 import { GoogleLogin } from '@react-oauth/google';
 
@@ -43,7 +42,6 @@ const FEATURES = [
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
-  const router = useRouter();
 
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -91,7 +89,6 @@ export default function LoginPage() {
 
   const doLogin = async (credentials) => {
     await login(credentials);
-    router.push('/dashboard');
   };
 
   const handleSubmit = async (e) => {
@@ -153,7 +150,6 @@ export default function LoginPage() {
     setError('');
     try {
       await googleLogin(credentialResponse.credential);
-      router.push('/dashboard');
     } catch (err) {
       setError(err?.response?.data?.message || 'Google sign-in failed.');
     } finally {
