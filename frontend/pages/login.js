@@ -136,7 +136,7 @@ export default function LoginPage() {
       const credentials =
         role === 'admin'
           ? { username: 'admin', password: 'admin123' }
-          : { username: 'user', password: 'user123' };
+          : { username: 'demo_user', password: 'user123' };
       await doLogin(credentials);
     } catch (err) {
       setError(err?.response?.data?.message || `Demo ${role} login failed.`);
